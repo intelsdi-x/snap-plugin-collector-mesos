@@ -1,0 +1,1 @@
+# snap-plugin-collector-messos
