@@ -1,0 +1,19 @@
+{
+	"ImportPath": "github.com/intelsdi-x/snap-plugin-collector-mesos",
+	"GoVersion": "go1.5",
+	"Deps": [
+		{
+			"ImportPath": "github.com/intelsdi-x/snap-plugin-utilities",
+			"Rev": "f6ebcc7cdefd9a74e256187e638ad6fa62487629"
+		},
+		{
+			"ImportPath": "github.com/oleiade/reflections",
+			"Comment": "0.1.2-2-g632977f",
+			"Rev": "632977f98cd34d217c4b57d0840ec188b3d3dcaf"
+		},
+		{
+			"ImportPath": "github.com/vektra/errors",
+			"Rev": "c64d83aba85aa4392895aadeefabbd24e89f3580"
+		}
+	]
+}
