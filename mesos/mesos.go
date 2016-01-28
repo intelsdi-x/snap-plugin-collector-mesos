@@ -101,7 +101,9 @@ func (mp *mesosPlugin) CollectMetrics(metricTypes []plugin.PluginMetricType) ([]
 
 	content, err := agent.GetStats(url.(string))
 	if err != nil {
-		return nil, err
+		// TODO - workaround for mesos cluster
+		// TODO - Handling case where there is not connection to mesos agent
+		return nil, nil
 	}
 	executors := agent.ParseStats(content)
 
@@ -148,7 +150,6 @@ func (mp *mesosPlugin) CollectMetrics(metricTypes []plugin.PluginMetricType) ([]
 						metrics = append(metrics, metric)
 					}
 				}
-
 			} else {
 				eId := namespace[3]
 				fId := namespace[4]
@@ -157,9 +158,7 @@ func (mp *mesosPlugin) CollectMetrics(metricTypes []plugin.PluginMetricType) ([]
 					fmt.Println("foo")
 				}
 			}
-
 		}
-
 	}
 	return metrics, nil
 }

@@ -9,24 +9,11 @@
             "metrics": {
                 "/intel/mesos/agent/*": {}
             },
-            "config": {
-                "/intel/mock": {
-                    "password": "secret",
-                    "user": "root"
-                }
-            },
             "process": [
                 {
-                    "plugin_name": "passthru",
+                    "plugin_name": "mesos-agent",
                     "process": null,
-                    "publish": [
-                        {                         
-                            "plugin_name": "file",
-                            "config": {
-                                "file": "/tmp/published_mesos"
-                            }
-                        }
-                    ],
+                    "publish": null,
                     "config": null
                 }
             ],
