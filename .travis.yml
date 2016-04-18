@@ -1,8 +1,8 @@
 sudo: required
 language: go
 go:
-- 1.4.2
 - 1.5
+- 1.6
 env:
   global:
     - SNAP_PLUGIN_SOURCE=/home/travis/gopath/src/github.com/intelsdi-x/snap-plugin-collector-mesos
