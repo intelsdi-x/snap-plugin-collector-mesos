@@ -18,4 +18,65 @@ limitations under the License.
 
 package agent
 
-import ()
+import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+
+	"github.com/mitchellh/mapstructure"
+)
+
+type Executor struct {
+	ID         string                 `json:"executor_id" mapstructure:"executor_id"`
+	Name       string                 `json:"executor_name" mapstructure:"executor_name"`
+	Source     string                 `json:"source" mapstructure:"source"`
+	Framework  string                 `json:"framework_id" mapstructure:"framework_id"`
+	Statistics map[string]interface{} `json:"statistics" mapstructure:"statistics"`
+}
+
+func (e *Executor) GetExecutorStatistic(stat string) (float64, error) {
+	if val, ok := e.Statistics[stat]; ok {
+		return val.(float64), nil
+	} else if perf, ok := e.Statistics["perf"]; ok {
+		if val, ok := perf.(map[string]interface{})[stat]; ok {
+			return val.(float64), nil
+		}
+	}
+	return 0, fmt.Errorf("Requested stat %s is not available for %s", stat, e.ID)
+}
+
+func GetAgentStatistics(url string) ([]Executor, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf(resp.Status)
+	}
+	defer resp.Body.Close()
+
+	content, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	rendered := []map[string]interface{}{}
+	err = json.Unmarshal(content, &rendered)
+	if err != nil {
+		return nil, err
+	}
+
+	executors := []Executor{}
+	for _, r := range rendered {
+		var executor Executor
+		err = mapstructure.Decode(r, &executor)
+		if err != nil {
+			return nil, err
+		}
+		executors = append(executors, executor)
+	}
+
+	return executors, nil
+}
