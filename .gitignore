@@ -33,6 +33,7 @@ build/
 # Misc
 .DS_Store
 .idea
+.vagrant/
 tmp/
 *.swp
 profile.cov
