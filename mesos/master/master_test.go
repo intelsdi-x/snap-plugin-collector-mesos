@@ -18,4 +18,72 @@ limitations under the License.
 
 package master
 
-import ()
+import (
+	"net"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strconv"
+	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
+)
+
+func TestIsLeader(t *testing.T) {
+
+	// ts1 simulates a host that is the leader
+	ts1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Location", r.URL.String())
+		w.WriteHeader(307)
+	}))
+
+	// ts2 simulates a host that is not the leader
+	ts2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Location", "//mesos-master-2.example.com:5050")
+		w.WriteHeader(307)
+	}))
+
+	defer ts1.Close()
+	defer ts2.Close()
+
+	Convey("Determine if master is leader", t, func() {
+		u, err := url.Parse(ts1.URL)
+		if err != nil {
+			panic(err)
+		}
+
+		host, p, _ := net.SplitHostPort(u.Host)
+		port, err := strconv.Atoi(p)
+		if err != nil {
+			panic(err)
+		}
+
+		Convey("No error should be reported", func() {
+			_, err := IsLeader(host, port)
+			So(err, ShouldBeNil)
+		})
+
+		Convey("Should return true when leading", func() {
+			hostIsLeader, err := IsLeader(host, port)
+			So(hostIsLeader, ShouldBeTrue)
+			So(err, ShouldBeNil)
+		})
+
+		Convey("Should return false when not leading", func() {
+			u, err := url.Parse(ts2.URL)
+			if err != nil {
+				panic(err)
+			}
+
+			host, p, _ := net.SplitHostPort(u.Host)
+			port, err := strconv.Atoi(p)
+			if err != nil {
+				panic(err)
+			}
+
+			hostIsLeader, err := IsLeader(host, port)
+			So(hostIsLeader, ShouldBeFalse)
+			So(err, ShouldBeNil)
+		})
+	})
+}
