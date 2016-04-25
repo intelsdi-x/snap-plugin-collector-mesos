@@ -32,6 +32,10 @@ well as metrics about running containers.
 ## Community Support
 
 ## Contributing
+We love contributions!
+
+There's more than one way to give back, from examples to blog posts to code updates. See our recommended process in
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 [snap][snap-github], along with this plugin, is open source software released
