@@ -17,6 +17,7 @@ function parse_args {
             --mesos_release)  MESOS_RELEASE="$2"                ; shift  ;;
             --golang_release) GOLANG_RELEASE="$2"               ; shift  ;;
             --snap_release)   SNAP_RELEASE="$2"                 ; shift  ;;
+            --ip_address)     IP_ADDRESS="${2:-127.0.0.1}"      ; shift  ;;
             --*)              echo "Error: invalid option '$1'" ; exit 1 ;;
         esac
         shift
@@ -66,17 +67,17 @@ function configure_mesos {
     mkdir -p /etc/{mesos,mesos-master,mesos-slave}
 
     # Master
-    echo "zk://10.180.10.180:2181/mesos" > /etc/mesos/zk
-    echo "10.180.10.180"                 > /etc/mesos-master/hostname
-    echo "10.180.10.180"                 > /etc/mesos-master/ip
+    echo "zk://${IP_ADDRESS}:2181/mesos" > /etc/mesos/zk
+    echo "${IP_ADDRESS}"                 > /etc/mesos-master/hostname
+    echo "${IP_ADDRESS}"                 > /etc/mesos-master/ip
     service mesos-master restart
 
     # Agent
     # Note: there is a known bug in Mesos when using the 'cgroups/perf_event' isolator
     # on specific kernels and platforms. For more info, see MESOS-4705.
     echo "mesos"                                      > /etc/mesos-slave/containerizers
-    echo "10.180.10.180"                              > /etc/mesos-slave/hostname
-    echo "10.180.10.180"                              > /etc/mesos-slave/ip
+    echo "${IP_ADDRESS}"                              > /etc/mesos-slave/hostname
+    echo "${IP_ADDRESS}"                              > /etc/mesos-slave/ip
     echo "cgroups/cpu,cgroups/mem,cgroups/perf_event" > /etc/mesos-slave/isolation
     echo "cpu-clock,task-clock,context-switches"      > /etc/mesos-slave/perf_events
     echo "/var/lib/mesos"                             > /etc/mesos-slave/work_dir
@@ -86,8 +87,8 @@ function configure_mesos {
 --------------------------------------------------
 Mesos version ${MESOS_RELEASE} has been installed.
 
-  * Master: http://10.180.10.180:5050
-  * Agent: http://10.180.10.180:5051
+  * Master: http://${IP_ADDRESS}:5050
+  * Agent: http://${IP_ADDRESS}:5051
 
 --------------------------------------------------
 END
