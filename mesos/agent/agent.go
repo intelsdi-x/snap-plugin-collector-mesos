@@ -1,5 +1,3 @@
-// +build linux
-
 /*
 Copyright 2016 Intel Corporation
 
@@ -17,5 +15,3 @@ limitations under the License.
 */
 
 package agent
-
-import ()

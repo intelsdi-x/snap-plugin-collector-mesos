@@ -1,5 +1,3 @@
-// +build linux
-
 /*
 Copyright 2016 Intel Corporation
 
@@ -19,7 +17,6 @@ limitations under the License.
 package mesos
 
 import (
-	"github.com/intelsdi-x/snap-plugin-utilities/config"
 	"github.com/intelsdi-x/snap/control/plugin"
 	"github.com/intelsdi-x/snap/control/plugin/cpolicy"
 )
@@ -52,9 +49,9 @@ func (m *Mesos) GetConfigPolicy() (*cpolicy.ConfigPolicy, error) {
 }
 
 func (m *Mesos) GetMetricTypes(cfg plugin.PluginConfigType) ([]plugin.PluginMetricType, error) {
-	// TODO
+	return []plugin.PluginMetricType{}, nil
 }
 
 func (m *Mesos) CollectMetrics(mts []plugin.PluginMetricType) ([]plugin.PluginMetricType, error) {
-	// TODO
+	return []plugin.PluginMetricType{}, nil
 }

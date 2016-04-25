@@ -17,11 +17,3 @@ limitations under the License.
 */
 
 package mesos
-
-import (
-	"testing"
-)
-
-func TestMesosCollectMetrics(t *testing.T) {
-	// TODO
-}

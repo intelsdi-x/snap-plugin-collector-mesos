@@ -19,7 +19,7 @@ package main
 import (
 	"os"
 
-	"github.com/intelsdi-x/snap-plugin-collector-mesos"
+	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos"
 	"github.com/intelsdi-x/snap/control/plugin"
 )
 
