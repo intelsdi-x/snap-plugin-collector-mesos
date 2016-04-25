@@ -23,8 +23,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-
-	"github.com/mitchellh/mapstructure"
 )
 
 type Executor struct {
@@ -62,20 +60,11 @@ func GetAgentStatistics(url string) ([]Executor, error) {
 		return nil, err
 	}
 
-	rendered := []map[string]interface{}{}
-	err = json.Unmarshal(content, &rendered)
+
+	var executors []Executor
+	err = json.Unmarshal(content, &executors)
 	if err != nil {
 		return nil, err
-	}
-
-	executors := []Executor{}
-	for _, r := range rendered {
-		var executor Executor
-		err = mapstructure.Decode(r, &executor)
-		if err != nil {
-			return nil, err
-		}
-		executors = append(executors, executor)
 	}
 
 	return executors, nil
