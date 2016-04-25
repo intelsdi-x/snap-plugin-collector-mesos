@@ -17,6 +17,8 @@ limitations under the License.
 package mesos
 
 import (
+	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/master"
+	"github.com/intelsdi-x/snap-plugin-utilities/config"
 	"github.com/intelsdi-x/snap/control/plugin"
 	"github.com/intelsdi-x/snap/control/plugin/cpolicy"
 )
@@ -49,7 +51,21 @@ func (m *Mesos) GetConfigPolicy() (*cpolicy.ConfigPolicy, error) {
 }
 
 func (m *Mesos) GetMetricTypes(cfg plugin.PluginConfigType) ([]plugin.PluginMetricType, error) {
-	return []plugin.PluginMetricType{}, nil
+	// We expect the value of "master" in the global config to follow the convention "192.168.99.100:5050"
+	master_cfg, err := config.GetConfigItems(cfg, []string{"master"})
+	if err != nil {
+		return nil, err
+	}
+
+	metricTypes := []plugin.PluginMetricType{}
+
+	master_mts, err := master.GetMetricsSnapshot(master_cfg["master"].(string))
+	for key, _ := range master_mts {
+		namespace := []string{pluginVendor, pluginName, "master", key}
+		metricType := plugin.PluginMetricType{Namespace_: namespace}
+		metricTypes = append(metricTypes, metricType)
+	}
+	return metricTypes, nil
 }
 
 func (m *Mesos) CollectMetrics(mts []plugin.PluginMetricType) ([]plugin.PluginMetricType, error) {

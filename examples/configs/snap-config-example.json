@@ -1,0 +1,13 @@
+{
+  "control": {
+    "plugins": {
+      "collector": {
+        "mesos": {
+          "all": {
+            "master": "10.180.10.180:5050"
+          }
+        }
+      }
+    }
+  }
+}

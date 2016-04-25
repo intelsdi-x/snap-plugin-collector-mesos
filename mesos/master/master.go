@@ -20,9 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/http"
-	"strconv"
 	"strings"
 )
 
@@ -33,11 +31,11 @@ import (
 //     "master/cpus_total": 2.0
 //   }
 //
-func GetMetricsSnapshot(host string, port int) (map[string]float64, error) {
+func GetMetricsSnapshot(host string) (map[string]float64, error) {
 	data := map[string]float64{}
 
 	// TODO(roger): abstract the http client for consistent use throughout this plugin
-	url := "http://" + net.JoinHostPort(host, strconv.Itoa(port)) + "/metrics/snapshot"
+	url := "http://" + host + "/metrics/snapshot"
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -61,10 +59,8 @@ func GetMetricsSnapshot(host string, port int) (map[string]float64, error) {
 }
 
 // Determine if a given host is currently the leader, based on the location provided by the '/master/redirect' endpoint.
-func IsLeader(host string, port int) (bool, error) {
-	master := net.JoinHostPort(host, strconv.Itoa(port))
-
-	req, err := http.NewRequest("HEAD", "http://"+master+"/master/redirect", nil)
+func IsLeader(host string) (bool, error) {
+	req, err := http.NewRequest("HEAD", "http://"+host+"/master/redirect", nil)
 	if err != nil {
 		return false, fmt.Errorf("request error: %s", err)
 	}
@@ -85,7 +81,7 @@ func IsLeader(host string, port int) (bool, error) {
 		return false, err
 	}
 
-	if strings.Contains(location.Host, master) {
+	if strings.Contains(location.Host, host) {
 		return true, nil
 	} else {
 		return false, nil

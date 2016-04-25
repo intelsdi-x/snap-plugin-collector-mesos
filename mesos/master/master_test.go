@@ -20,11 +20,9 @@ package master
 
 import (
 	"encoding/json"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"strconv"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -48,13 +46,13 @@ func TestGetMetricsSnapshot(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	host, port, err := extractHostAndPortFromURL(ts.URL)
+	host, err := extractHostFromURL(ts.URL)
 	if err != nil {
 		panic(err)
 	}
 
 	Convey("Get metrics snapshot from the master", t, func() {
-		res, err := GetMetricsSnapshot(host, port)
+		res, err := GetMetricsSnapshot(host)
 
 		Convey("Should return a map of metrics", func() {
 			So(len(res), ShouldEqual, 4)
@@ -82,46 +80,39 @@ func TestIsLeader(t *testing.T) {
 	defer ts2.Close()
 
 	Convey("Determine if master is leader", t, func() {
-		host, port, err := extractHostAndPortFromURL(ts1.URL)
+		host, err := extractHostFromURL(ts1.URL)
 		if err != nil {
 			panic(err)
 		}
 
 		Convey("No error should be reported", func() {
-			_, err := IsLeader(host, port)
+			_, err := IsLeader(host)
 			So(err, ShouldBeNil)
 		})
 
 		Convey("Should return true when leading", func() {
-			hostIsLeader, err := IsLeader(host, port)
+			hostIsLeader, err := IsLeader(host)
 			So(hostIsLeader, ShouldBeTrue)
 			So(err, ShouldBeNil)
 		})
 
 		Convey("Should return false when not leading", func() {
-			host, port, err := extractHostAndPortFromURL(ts2.URL)
+			host, err := extractHostFromURL(ts2.URL)
 			if err != nil {
 				panic(err)
 			}
 
-			hostIsLeader, err := IsLeader(host, port)
+			hostIsLeader, err := IsLeader(host)
 			So(hostIsLeader, ShouldBeFalse)
 			So(err, ShouldBeNil)
 		})
 	})
 }
 
-func extractHostAndPortFromURL(u string) (string, int, error) {
+func extractHostFromURL(u string) (string, error) {
 	parsed, err := url.Parse(u)
 	if err != nil {
-		return "", 0, err
+		return "", err
 	}
-
-	host, p, _ := net.SplitHostPort(parsed.Host)
-	port, err := strconv.Atoi(p)
-	if err != nil {
-		return "", 0, err
-	}
-
-	return host, port, nil
+	return parsed.Host, nil
 }
