@@ -19,6 +19,7 @@ limitations under the License.
 package master
 
 import (
+	"encoding/json"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -28,6 +29,40 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 )
+
+func TestGetMetricsSnapshot(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		td, err := json.Marshal(map[string]float64{
+			"allocator/event_queue_dispatches": 0.0,
+			"master/cpus_percent":              0.0,
+			"registrar/queued_operations":      0.0,
+			"system/cpus_total":                2.0,
+		})
+		if err != nil {
+			panic(err)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(200)
+		w.Write(td)
+	}))
+	defer ts.Close()
+
+	host, port, err := extractHostAndPortFromURL(ts.URL)
+	if err != nil {
+		panic(err)
+	}
+
+	Convey("Get metrics snapshot from the master", t, func() {
+		res, err := GetMetricsSnapshot(host, port)
+
+		Convey("Should return a map of metrics", func() {
+			So(len(res), ShouldEqual, 4)
+			So(res["system/cpus_total"], ShouldEqual, 2.0)
+			So(err, ShouldBeNil)
+		})
+	})
+}
 
 func TestIsLeader(t *testing.T) {
 
@@ -47,13 +82,7 @@ func TestIsLeader(t *testing.T) {
 	defer ts2.Close()
 
 	Convey("Determine if master is leader", t, func() {
-		u, err := url.Parse(ts1.URL)
-		if err != nil {
-			panic(err)
-		}
-
-		host, p, _ := net.SplitHostPort(u.Host)
-		port, err := strconv.Atoi(p)
+		host, port, err := extractHostAndPortFromURL(ts1.URL)
 		if err != nil {
 			panic(err)
 		}
@@ -70,13 +99,7 @@ func TestIsLeader(t *testing.T) {
 		})
 
 		Convey("Should return false when not leading", func() {
-			u, err := url.Parse(ts2.URL)
-			if err != nil {
-				panic(err)
-			}
-
-			host, p, _ := net.SplitHostPort(u.Host)
-			port, err := strconv.Atoi(p)
+			host, port, err := extractHostAndPortFromURL(ts2.URL)
 			if err != nil {
 				panic(err)
 			}
@@ -86,4 +109,19 @@ func TestIsLeader(t *testing.T) {
 			So(err, ShouldBeNil)
 		})
 	})
+}
+
+func extractHostAndPortFromURL(u string) (string, int, error) {
+	parsed, err := url.Parse(u)
+	if err != nil {
+		return "", 0, err
+	}
+
+	host, p, _ := net.SplitHostPort(parsed.Host)
+	port, err := strconv.Atoi(p)
+	if err != nil {
+		return "", 0, err
+	}
+
+	return host, port, nil
 }

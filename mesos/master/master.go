@@ -17,12 +17,48 @@ limitations under the License.
 package master
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"strconv"
 	"strings"
 )
+
+// Collect metrics from the '/metrics/snapshot' endpoint on the master.  The '/metrics/snapshot' endpoint returns JSON,
+// and all metrics contained in the endpoint use a string as the key, and a double (float64) for the value. For example:
+//
+//   {
+//     "master/cpus_total": 2.0
+//   }
+//
+func GetMetricsSnapshot(host string, port int) (map[string]float64, error) {
+	data := map[string]float64{}
+
+	// TODO(roger): abstract the http client for consistent use throughout this plugin
+	url := "http://" + net.JoinHostPort(host, strconv.Itoa(port)) + "/metrics/snapshot"
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return data, fmt.Errorf("fetch error: %s", resp.Status)
+	}
+
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return data, fmt.Errorf("read error: %s: %v\n", url, err)
+	}
+
+	if err := json.Unmarshal(b, &data); err != nil {
+		return data, fmt.Errorf("unmarshal error: %s: %v\n", b, err)
+	}
+
+	return data, nil
+}
 
 // Determine if a given host is currently the leader, based on the location provided by the '/master/redirect' endpoint.
 func IsLeader(host string, port int) (bool, error) {
