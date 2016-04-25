@@ -18,4 +18,113 @@ limitations under the License.
 
 package agent
 
-import ()
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
+)
+
+var server *httptest.Server = httptest.NewServer(
+	AgentStatisticsHandler(testData),
+)
+
+var testData []Executor = []Executor{
+	Executor{
+		ID:        "id1",
+		Name:      "name1",
+		Source:    "source1",
+		Framework: "frame1",
+		Statistics: map[string]interface{}{
+			"stat_a": 1.1,
+			"stat_b": 2.2,
+			"perf": map[string]interface{}{
+				"perf_1": 3.3,
+			},
+		},
+	},
+	Executor{
+		ID:        "id2",
+		Name:      "name2",
+		Source:    "source2",
+		Framework: "frame2",
+		Statistics: map[string]interface{}{
+			"stat_c": 4.4,
+			"stat_d": 5.5,
+		},
+	},
+}
+
+func AgentStatisticsHandler(executors []Executor) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		rendered, err := json.Marshal(executors)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Fprintf(w, string(rendered))
+	}
+}
+
+func TestGetAgentStatistics(t *testing.T) {
+	Convey("When mesos agent statistics are requested", t, func() {
+		execs, err := GetAgentStatistics(server.URL)
+
+		Convey("Then no error should be reporeted", func() {
+			So(err, ShouldBeNil)
+		})
+
+		Convey("Then list of executors is returned", func() {
+			So(execs, ShouldNotBeNil)
+			So(len(execs), ShouldEqual, len(testData))
+
+			for i, exec := range execs {
+				So(exec.ID, ShouldEqual, testData[i].ID)
+				So(exec.Name, ShouldEqual, testData[i].Name)
+				So(exec.Framework, ShouldEqual, testData[i].Framework)
+				So(exec.Source, ShouldEqual, testData[i].Source)
+			}
+		})
+
+		Convey("Then proper stats are set", func() {
+			So(execs[0].Statistics["stat_a"], ShouldEqual, 1.1)
+			So(execs[0].Statistics["stat_b"], ShouldEqual, 2.2)
+			So(execs[1].Statistics["stat_c"], ShouldEqual, 4.4)
+			So(execs[1].Statistics["stat_d"], ShouldEqual, 5.5)
+		})
+	})
+}
+
+func TestGetExecutorStatistics(t *testing.T) {
+	tcs := []struct {
+		Executor Executor
+		Stat     string
+		Expected float64
+		Error    error
+	}{
+		{testData[0], "stat_a", 1.1, nil},
+		{testData[0], "stat_b", 2.2, nil},
+		{testData[0], "perf_1", 3.3, nil},
+		{testData[1], "stat_c", 4.4, nil},
+		{testData[1], "stat_d", 5.5, nil},
+		{testData[0], "stat_c", 0, fmt.Errorf("Requested stat %s is not available for %s", "stat_c", testData[0].ID)},
+	}
+
+	for _, tc := range tcs {
+		Convey("When executor statistics are requested", t, func() {
+			value, err := tc.Executor.GetExecutorStatistic(tc.Stat)
+
+			Convey("Then proper value is returned", func() {
+				if tc.Error == nil {
+					So(err, ShouldEqual, tc.Error)
+				} else {
+					So(err.Error(), ShouldEqual, tc.Error.Error())
+				}
+				So(value, ShouldEqual, tc.Expected)
+			})
+		})
+	}
+}
