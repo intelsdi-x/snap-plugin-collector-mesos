@@ -19,16 +19,8 @@ limitations under the License.
 package mesos
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/intelsdi-x/snap/control/plugin"
 	"github.com/intelsdi-x/snap/control/plugin/cpolicy"
-
-	"github.com/intelsdi-x/snap-plugin-utilities/config"
-	"github.com/intelsdi-x/snap-plugin-utilities/ns"
-
-	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/agent"
 )
 
 const (
@@ -59,45 +51,7 @@ func (m *Mesos) GetConfigPolicy() (*cpolicy.ConfigPolicy, error) {
 }
 
 func (m *Mesos) GetMetricTypes(cfg plugin.PluginConfigType) ([]plugin.PluginMetricType, error) {
-	metricTypes := []plugin.PluginMetricType{}
-	items, err := config.GetConfigItems(cfg, "agent_url", "master_url")
-	if err != nil {
-		return nil, fmt.Errorf("Mesos master and/or agent url not provided")
-	}
-
-	namespaces := []string{}
-	// build namespace from mesos agent endpoint
-	{
-		agentURL := items["agent_url"].(string)
-		executors, err := agent.GetAgentStatistics(agentURL)
-		if err != nil {
-			return nil, fmt.Errorf("Can't get Mesos agent statistics")
-		}
-		// include double wildcard for executor_id and framework_id
-		// TODO: with incoming changes to namespace creation it will need some rework
-		for _, executor := range executors {
-			ns.FromMap(
-				executor.Statistics,
-				strings.Join(
-					[]string{pluginVendor, pluginName, "agent", "*", "*"}, "/"),
-				&namespaces,
-			)
-		}
-	}
-
-	// build namespace from mesos master endpoint
-	{
-		//TODO
-	}
-
-	// build metric types from available namespaces
-	for _, namespace := range namespaces {
-		metricTypes = append(metricTypes, plugin.PluginMetricType{
-			Namespace_: strings.Split(namespace, "/"),
-		})
-	}
-
-	return metricTypes, nil
+	return []plugin.PluginMetricType{}, nil
 }
 
 func (m *Mesos) CollectMetrics(mts []plugin.PluginMetricType) ([]plugin.PluginMetricType, error) {
