@@ -18,4 +18,101 @@ limitations under the License.
 
 package master
 
-import ()
+import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
+)
+
+func TestGetMetricsSnapshot(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		td, err := json.Marshal(map[string]float64{
+			"allocator/event_queue_dispatches": 0.0,
+			"master/cpus_percent":              0.0,
+			"registrar/queued_operations":      0.0,
+			"system/cpus_total":                2.0,
+		})
+		if err != nil {
+			panic(err)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(200)
+		w.Write(td)
+	}))
+	defer ts.Close()
+
+	host, err := extractHostFromURL(ts.URL)
+	if err != nil {
+		panic(err)
+	}
+
+	Convey("Get metrics snapshot from the master", t, func() {
+		res, err := GetMetricsSnapshot(host)
+
+		Convey("Should return a map of metrics", func() {
+			So(len(res), ShouldEqual, 4)
+			So(res["system/cpus_total"], ShouldEqual, 2.0)
+			So(err, ShouldBeNil)
+		})
+	})
+}
+
+func TestIsLeader(t *testing.T) {
+
+	// ts1 simulates a host that is the leader
+	ts1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Location", r.URL.String())
+		w.WriteHeader(307)
+	}))
+
+	// ts2 simulates a host that is not the leader
+	ts2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Location", "//mesos-master-2.example.com:5050")
+		w.WriteHeader(307)
+	}))
+
+	defer ts1.Close()
+	defer ts2.Close()
+
+	Convey("Determine if master is leader", t, func() {
+		host, err := extractHostFromURL(ts1.URL)
+		if err != nil {
+			panic(err)
+		}
+
+		Convey("No error should be reported", func() {
+			_, err := IsLeader(host)
+			So(err, ShouldBeNil)
+		})
+
+		Convey("Should return true when leading", func() {
+			hostIsLeader, err := IsLeader(host)
+			So(hostIsLeader, ShouldBeTrue)
+			So(err, ShouldBeNil)
+		})
+
+		Convey("Should return false when not leading", func() {
+			host, err := extractHostFromURL(ts2.URL)
+			if err != nil {
+				panic(err)
+			}
+
+			hostIsLeader, err := IsLeader(host)
+			So(hostIsLeader, ShouldBeFalse)
+			So(err, ShouldBeNil)
+		})
+	})
+}
+
+func extractHostFromURL(u string) (string, error) {
+	parsed, err := url.Parse(u)
+	if err != nil {
+		return "", err
+	}
+	return parsed.Host, nil
+}
