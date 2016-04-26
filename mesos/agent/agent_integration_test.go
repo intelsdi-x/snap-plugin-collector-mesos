@@ -18,4 +18,12 @@ limitations under the License.
 
 package agent
 
-import ()
+import (
+	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
+)
+
+func TestIntegration(t *testing.T) {
+	Convey("Given ...", t, func() {})
+}
