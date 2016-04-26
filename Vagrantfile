@@ -14,10 +14,11 @@
 MESOS_RELEASE  = '0.28.1-2.0.20.ubuntu1404'
 GOLANG_RELEASE = '1.6.2'
 SNAP_RELEASE   = 'v0.13.0-beta'
+IP_ADDRESS     = '10.180.10.180'
 
 Vagrant.configure(2) do |config|
   config.vm.box = 'ubuntu/trusty64'
-  config.vm.network 'private_network', ip: '10.180.10.180'
+  config.vm.network 'private_network', ip: IP_ADDRESS
 
   config.vm.provider 'virtualbox' do |vb|
     vb.name   = 'vagrant-snap-mesos'
@@ -30,6 +31,7 @@ Vagrant.configure(2) do |config|
     args =  [ '--mesos_release',  MESOS_RELEASE  ]
     args += [ '--golang_release', GOLANG_RELEASE ]
     args += [ '--snap_release',   SNAP_RELEASE   ]
+    args += [ '--ip_address',     IP_ADDRESS     ]
     sh.args = args
   end
 end
