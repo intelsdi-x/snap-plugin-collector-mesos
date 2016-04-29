@@ -56,31 +56,15 @@ func (m *Mesos) GetConfigPolicy() (*cpolicy.ConfigPolicy, error) {
 }
 
 func (m *Mesos) GetMetricTypes(cfg plugin.PluginConfigType) ([]plugin.PluginMetricType, error) {
-	// Note: although config.GetConfigItems can accept multiple config parameter names, it appears that if
-	// any of those names are missing, GetConfigItems() will `return nil, err`. Since this plugin will work
-	// individually with master or agent (or both), we break this up into two separate lookups and then
-	// test for the existence of the configuration parameter to determine which metric types are available.
-
-	// We expect the value of "master" in the global config to follow the convention "192.168.99.100:5050"
-	master_cfg, master_err := config.GetConfigItems(cfg, []string{"master"})
-
-	// We expect the value of "agent" in the global config to follow the convention "192.168.99.100:5051"
-	agent_cfg, agent_err := config.GetConfigItems(cfg, []string{"agent"})
-
-	if master_err != nil && agent_err != nil {
-		return nil, fmt.Errorf("error: no global config specified for \"master\" or \"agent\".")
-	}
-	if master_err != nil {
-		log.Warn("no global config specified for \"master\". only \"agent\" metrics will be collected.")
-	}
-	if agent_err != nil {
-		log.Warn("no global config specified for \"agent\". only \"master\" metrics will be collected.")
+	configItems, err := getConfig(cfg)
+	if err != nil {
+		return nil, err
 	}
 
 	metricTypes := []plugin.PluginMetricType{}
 
-	if master_err == nil {
-		master_mts, err := master.GetMetricsSnapshot(master_cfg["master"].(string))
+	if configItems["master"] != nil {
+		master_mts, err := master.GetMetricsSnapshot(configItems["master"].(string))
 		if err != nil {
 			return nil, err
 		}
@@ -91,8 +75,8 @@ func (m *Mesos) GetMetricTypes(cfg plugin.PluginConfigType) ([]plugin.PluginMetr
 		}
 	}
 
-	if agent_err == nil {
-		agent_mts, err := agent.GetMetricsSnapshot(agent_cfg["agent"].(string))
+	if configItems["agent"] != nil {
+		agent_mts, err := agent.GetMetricsSnapshot(configItems["agent"].(string))
 		if err != nil {
 			return nil, err
 		}
@@ -108,4 +92,36 @@ func (m *Mesos) GetMetricTypes(cfg plugin.PluginConfigType) ([]plugin.PluginMetr
 
 func (m *Mesos) CollectMetrics(mts []plugin.PluginMetricType) ([]plugin.PluginMetricType, error) {
 	return []plugin.PluginMetricType{}, nil
+}
+
+func getConfig(cfg interface{}) (map[string]interface{}, error) {
+	items := make(map[string]interface{})
+	var ok bool
+
+	// Note: although config.GetConfigItems can accept multiple config parameter names, it appears that if
+	// any of those names are missing, GetConfigItems() will `return nil, err`. Since this plugin will work
+	// individually with master or agent (or both), we break this up into two separate lookups and then
+	// test for the existence of the configuration parameter to determine which metric types are available.
+
+	// We expect the value of "master" in the global config to follow the convention "192.168.99.100:5050"
+	master_cfg, master_err := config.GetConfigItems(cfg, []string{"master"})
+
+	// We expect the value of "agent" in the global config to follow the convention "192.168.99.100:5051"
+	agent_cfg, agent_err := config.GetConfigItems(cfg, []string{"agent"})
+
+	if master_err != nil && agent_err != nil {
+		return nil, fmt.Errorf("error: no global config specified for \"master\" or \"agent\".")
+	}
+
+	items["master"], ok = master_cfg["master"].(string)
+	if !ok {
+		log.Warn("no global config specified for \"master\". only \"agent\" metrics will be collected.")
+	}
+
+	items["agent"], ok = agent_cfg["agent"].(string)
+	if !ok {
+		log.Warn("no global config specified for \"agent\". only \"master\" metrics will be collected.")
+	}
+
+	return items, nil
 }
