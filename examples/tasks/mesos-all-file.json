@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "schedule": {
+    "type": "simple",
+    "interval": "15s"
+  },
+  "workflow": {
+    "collect": {
+      "metrics": {
+        "/intel/mesos/master/registrar/state_store_ms/p99": {},
+        "/intel/mesos/master/master/slaves_connected": {},
+        "/intel/mesos/master/master/tasks_running": {},
+        "/intel/mesos/master/system/load_1min": {},
+        "/intel/mesos/master/system/load_5min": {},
+        "/intel/mesos/master/system/load_15min": {},
+        "/intel/mesos/agent/slave/cpus_percent": {},
+        "/intel/mesos/agent/slave/mem_percent": {},
+        "/intel/mesos/agent/slave/disk_percent": {},
+        "/intel/mesos/agent/slave/tasks_running": {},
+        "/intel/mesos/agent/system/load_1min": {},
+        "/intel/mesos/agent/system/load_5min": {},
+        "/intel/mesos/agent/system/load_15min": {}
+      },
+      "config": {},
+      "process": [
+        {
+          "plugin_name": "passthru",
+          "process": null,
+          "publish": [
+            {
+              "plugin_name": "file",
+              "config": {
+                "file": "/tmp/snap-published-metrics_mesos-all"
+              }
+            }
+          ],
+          "config": null
+        }
+      ],
+      "publish": null
+    }
+  }
+}
