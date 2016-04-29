@@ -36,6 +36,9 @@ well as metrics about running containers.
   the `cgroups/perf_event` isolator was enabled on an agent, the `perf` object would appear in the JSON returned by the
   agent's `/monitor/statistics` endpoint, but it would contain no data. This issue was resolved in Mesos 0.29.0, and was
   backported to Mesos 0.28.2, 0.27.3, and 0.26.2. For more information, see [MESOS-4705][mesos-4705-jira].
+  * There is an ongoing effort to rename the Mesos "slave" service to "agent". As of Mesos 0.28.x, this work is still
+  in progress. This plugin uses the newer "agent" terminology, but some metrics returned by Mesos may still use the
+  older "slave" term. For more information, see [MESOS-1478][mesos-1478-jira].
 
 ### Roadmap
 
@@ -56,6 +59,7 @@ under the [Apache Software License, version 2.0](LICENSE).
 
 
 [marcin-github]: https://github.com/marcin-krolik
+[mesos-1478-jira]: https://issues.apache.org/jira/browse/MESOS-1478
 [mesos-4705-jira]: https://issues.apache.org/jira/browse/MESOS-4705
 [mesos-home]: http://mesos.apache.org
 [roger-github]: https://github.com/rji
