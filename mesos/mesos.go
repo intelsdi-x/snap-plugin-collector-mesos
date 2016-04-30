@@ -18,6 +18,7 @@ package mesos
 
 import (
 	"fmt"
+	"strings"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/agent"
@@ -85,9 +86,8 @@ func (m *Mesos) GetMetricTypes(cfg plugin.PluginConfigType) ([]plugin.PluginMetr
 		}
 
 		for key, _ := range master_mts {
-			namespace := []string{pluginVendor, pluginName, "master", key}
-			metricType := plugin.PluginMetricType{Namespace_: namespace}
-			metricTypes = append(metricTypes, metricType)
+			namespace := append([]string{pluginVendor, pluginName, "master"}, strings.Split(key, "/")...)
+			metricTypes = append(metricTypes, plugin.PluginMetricType{Namespace_: namespace})
 		}
 	}
 
@@ -98,9 +98,8 @@ func (m *Mesos) GetMetricTypes(cfg plugin.PluginConfigType) ([]plugin.PluginMetr
 		}
 
 		for key, _ := range agent_mts {
-			namespace := []string{pluginVendor, pluginName, "agent", key}
-			metricType := plugin.PluginMetricType{Namespace_: namespace}
-			metricTypes = append(metricTypes, metricType)
+			namespace := append([]string{pluginVendor, pluginName, "agent"}, strings.Split(key, "/")...)
+			metricTypes = append(metricTypes, plugin.PluginMetricType{Namespace_: namespace})
 		}
 	}
 
