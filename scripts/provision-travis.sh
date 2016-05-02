@@ -1,7 +1,6 @@
-#!/bin/bash
+#!/bin/bash -e
 # This script provisions a single-node Mesos cluster that can be used for
-# developing and testing the Mesos plugin for the Snap telemetry framework.
-set -e
+# running integration tests for the Mesos plugin in Travis CI.
 
 if [[ $(id -u) -ne 0 ]]; then
     echo "Please re-run this script as root."
@@ -15,8 +14,6 @@ function parse_args {
     while [[ $# > 1 ]]; do
         case "$1" in
             --mesos_release)  MESOS_RELEASE="$2"                ; shift  ;;
-            --golang_release) GOLANG_RELEASE="$2"               ; shift  ;;
-            --snap_release)   SNAP_RELEASE="$2"                 ; shift  ;;
             --ip_address)     IP_ADDRESS="${2:-127.0.0.1}"      ; shift  ;;
             --*)              echo "Error: invalid option '$1'" ; exit 1 ;;
         esac
@@ -42,6 +39,7 @@ function install_prereqs {
     apt-get -y update
     apt-get -y install apt-transport-https ca-certificates git \
         linux-tools-common linux-tools-generic linux-tools-$(uname -r)
+
 }
 
 function install_zookeeper {
@@ -94,79 +92,6 @@ Mesos version ${MESOS_RELEASE} has been installed.
 END
 }
 
-function install_golang {
-    local GOROOT="/usr/local"
-
-    if [[ -d "${GOROOT}/go" ]]; then
-        echo "Found an existing Go installation at ${GOROOT}/go. Skipping install..."
-        return
-    fi
-
-    echo "Installing Go ${GOLANG_RELEASE}..."
-    local GOLANG_URL="https://storage.googleapis.com/golang"
-    local GOLANG_FILENAME="go${GOLANG_RELEASE}.linux-amd64.tar.gz"
-
-    local GOPATH="/home/vagrant/work"
-
-    curl -sLO "${GOLANG_URL}/${GOLANG_FILENAME}"
-    tar zxf $GOLANG_FILENAME -C $GOROOT
-
-    echo "export GOPATH=${GOPATH}"                              >> /etc/profile
-    echo "export PATH=\${PATH}:\${GOPATH}/bin:${GOROOT}/go/bin" >> /etc/profile
-
-    mkdir -p "${GOPATH}/src/github.com/intelsdi-x" && chown -R vagrant:vagrant $GOPATH
-    ln -fs /vagrant "${GOPATH}/src/github.com/intelsdi-x/snap-plugin-collector-mesos"
-
-    cat << END
---------------------------------------------------------------
-Go ${GOLANG_RELEASE} has been installed to /usr/local/go.
-/usr/local/go/bin has been appended to \$PATH in /etc/profile.
-/home/vagrant/work has been set as the \$GOPATH.
-
-For more information on getting started with Go, see
-https://golang.org/doc/code.html
-
---------------------------------------------------------------
-END
-}
-
-function install_snap {
-    local SNAP_PATH="/usr/local/snap"
-    if [[ -d $SNAP_PATH ]]; then
-        echo "Found an existing Snap installation at ${SNAP_PATH}. Skipping install..."
-        return
-    fi
-
-    echo "Installing snap ${SNAP_RELEASE}..."
-    local SNAP_URL="https://github.com/intelsdi-x/snap/releases/download"
-    local SNAP_FILENAME="snap-${SNAP_RELEASE}-linux-amd64.tar.gz"
-    local SNAP_PLUGINS_FILENAME="snap-plugins-${SNAP_RELEASE}-linux-amd64.tar.gz"
-    curl -sLO "${SNAP_URL}/${SNAP_RELEASE}/${SNAP_FILENAME}"
-    curl -sLO "${SNAP_URL}/${SNAP_RELEASE}/${SNAP_PLUGINS_FILENAME}"
-
-    echo "export SNAP_PATH=${SNAP_PATH}"        >> /etc/profile
-    echo 'export PATH=${PATH}:${SNAP_PATH}/bin' >> /etc/profile
-    mkdir -p $SNAP_PATH
-    tar zxf $SNAP_FILENAME --strip-components=1 -C $SNAP_PATH
-    tar zxf $SNAP_PLUGINS_FILENAME --strip-components=1 -C $SNAP_PATH
-
-    cat << END
-------------------------------------------------------------------------
-Snap version ${SNAP_RELEASE} has been installed to ${SNAP_PATH}.
-${SNAP_PATH}/bin has been appended to \$PATH in /etc/profile.
-The Snap plugins have also been installed to ${SNAP_PATH}/plugin.
-
-When you're ready, you can start the snap daemon by running:
-
-  snapd --plugin-trust 0 --log-level 1 --auto-discover \\
-    "${SNAP_PATH}/plugin" >> /var/log/snap.log 2>&1 &
-
-or something similar.
-
-------------------------------------------------------------------------
-END
-}
-
 function main {
     parse_args "$@"
     install_prereqs
@@ -174,9 +99,6 @@ function main {
     install_zookeeper
     install_mesos
     configure_mesos
-
-    install_golang
-    install_snap
 }
 
 main "$@"
