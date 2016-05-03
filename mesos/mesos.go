@@ -17,6 +17,11 @@ limitations under the License.
 package mesos
 
 import (
+	"fmt"
+	"strings"
+
+	log "github.com/Sirupsen/logrus"
+	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/agent"
 	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/master"
 	"github.com/intelsdi-x/snap-plugin-utilities/config"
 	"github.com/intelsdi-x/snap/control/plugin"
@@ -51,23 +56,72 @@ func (m *Mesos) GetConfigPolicy() (*cpolicy.ConfigPolicy, error) {
 }
 
 func (m *Mesos) GetMetricTypes(cfg plugin.PluginConfigType) ([]plugin.PluginMetricType, error) {
-	// We expect the value of "master" in the global config to follow the convention "192.168.99.100:5050"
-	master_cfg, err := config.GetConfigItems(cfg, []string{"master"})
+	configItems, err := getConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
 
 	metricTypes := []plugin.PluginMetricType{}
 
-	master_mts, err := master.GetMetricsSnapshot(master_cfg["master"].(string))
-	for key, _ := range master_mts {
-		namespace := []string{pluginVendor, pluginName, "master", key}
-		metricType := plugin.PluginMetricType{Namespace_: namespace}
-		metricTypes = append(metricTypes, metricType)
+	if configItems["master"] != "" {
+		master_mts, err := master.GetMetricsSnapshot(configItems["master"].(string))
+		if err != nil {
+			return nil, err
+		}
+
+		for key, _ := range master_mts {
+			namespace := append([]string{pluginVendor, pluginName, "master"}, strings.Split(key, "/")...)
+			metricTypes = append(metricTypes, plugin.PluginMetricType{Namespace_: namespace})
+		}
 	}
+
+	if configItems["agent"] != "" {
+		agent_mts, err := agent.GetMetricsSnapshot(configItems["agent"].(string))
+		if err != nil {
+			return nil, err
+		}
+
+		for key, _ := range agent_mts {
+			namespace := append([]string{pluginVendor, pluginName, "agent"}, strings.Split(key, "/")...)
+			metricTypes = append(metricTypes, plugin.PluginMetricType{Namespace_: namespace})
+		}
+	}
+
 	return metricTypes, nil
 }
 
 func (m *Mesos) CollectMetrics(mts []plugin.PluginMetricType) ([]plugin.PluginMetricType, error) {
 	return []plugin.PluginMetricType{}, nil
+}
+
+func getConfig(cfg interface{}) (map[string]interface{}, error) {
+	items := make(map[string]interface{})
+	var ok bool
+
+	// Note: although config.GetConfigItems can accept multiple config parameter names, it appears that if
+	// any of those names are missing, GetConfigItems() will `return nil, err`. Since this plugin will work
+	// individually with master or agent (or both), we break this up into two separate lookups and then
+	// test for the existence of the configuration parameter to determine which metric types are available.
+
+	// We expect the value of "master" in the global config to follow the convention "192.168.99.100:5050"
+	master_cfg, master_err := config.GetConfigItems(cfg, []string{"master"})
+
+	// We expect the value of "agent" in the global config to follow the convention "192.168.99.100:5051"
+	agent_cfg, agent_err := config.GetConfigItems(cfg, []string{"agent"})
+
+	if master_err != nil && agent_err != nil {
+		return items, fmt.Errorf("error: no global config specified for \"master\" or \"agent\".")
+	}
+
+	items["master"], ok = master_cfg["master"].(string)
+	if !ok {
+		log.Warn("no global config specified for \"master\". only \"agent\" metrics will be collected.")
+	}
+
+	items["agent"], ok = agent_cfg["agent"].(string)
+	if !ok {
+		log.Warn("no global config specified for \"agent\". only \"master\" metrics will be collected.")
+	}
+
+	return items, nil
 }

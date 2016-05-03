@@ -21,6 +21,10 @@ package mesos
 import (
 	"testing"
 
+	log "github.com/Sirupsen/logrus"
+	"github.com/intelsdi-x/snap/control/plugin"
+	"github.com/intelsdi-x/snap/core/cdata"
+	"github.com/intelsdi-x/snap/core/ctypes"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -39,6 +43,59 @@ func TestMesosPlugin(t *testing.T) {
 		})
 		Convey("MesosCollector should be of type Mesos", func() {
 			So(mc, ShouldHaveSameTypeAs, &Mesos{})
+		})
+	})
+}
+
+func TestMesos_getConfig(t *testing.T) {
+	log.SetLevel(log.ErrorLevel) // Suppress warning messages from getConfig
+
+	Convey("Get plugin configuration from snap global config", t, func() {
+		Convey("When only a master is provided, getConfig() should return only the master value", func() {
+			node := cdata.NewNode()
+			node.AddItem("master", ctypes.ConfigValueStr{Value: "mesos-master.example.com:5050"})
+			snapCfg := plugin.PluginConfigType{ConfigDataNode: node}
+
+			parsedCfg, err := getConfig(snapCfg)
+
+			So(parsedCfg["master"].(string), ShouldEqual, "mesos-master.example.com:5050")
+			So(parsedCfg["agent"], ShouldEqual, "")
+			So(err, ShouldBeNil)
+		})
+
+		Convey("When only an agent is provided, getConfig() should return only the agent value", func() {
+			node := cdata.NewNode()
+			node.AddItem("agent", ctypes.ConfigValueStr{Value: "mesos-agent.example.com:5051"})
+			snapCfg := plugin.PluginConfigType{ConfigDataNode: node}
+
+			parsedCfg, err := getConfig(snapCfg)
+
+			So(parsedCfg["master"], ShouldEqual, "")
+			So(parsedCfg["agent"].(string), ShouldEqual, "mesos-agent.example.com:5051")
+			So(err, ShouldBeNil)
+		})
+
+		Convey("When both a master and an agent are provided, getConfig() should return both values", func() {
+			node := cdata.NewNode()
+			node.AddItem("master", ctypes.ConfigValueStr{Value: "mesos-master.example.com:5050"})
+			node.AddItem("agent", ctypes.ConfigValueStr{Value: "mesos-agent.example.com:5051"})
+			snapCfg := plugin.PluginConfigType{ConfigDataNode: node}
+
+			parsedCfg, err := getConfig(snapCfg)
+
+			So(len(parsedCfg), ShouldEqual, 2)
+			So(err, ShouldBeNil)
+		})
+
+		Convey("When both master and agent are missing, getConfig() should return an error", func() {
+			node := cdata.NewNode()
+			node.AddItem("foo", ctypes.ConfigValueStr{Value: "bar"})
+			snapCfg := plugin.PluginConfigType{ConfigDataNode: node}
+
+			parsedCfg, err := getConfig(snapCfg)
+
+			So(len(parsedCfg), ShouldEqual, 0)
+			So(err, ShouldNotBeNil)
 		})
 	})
 }
