@@ -1,90 +1,91 @@
-#!/bin/bash
+#!/bin/bash -e
 # The script does automatic checking on a Go package and its sub-packages, including:
-# 1. gofmt         (http://golang.org/cmd/gofmt/)
-# 2. goimports     (https://github.com/bradfitz/goimports)
-# 3. golint        (https://github.com/golang/lint)
-# 4. go vet        (http://golang.org/cmd/vet)
-# 5. race detector (http://blog.golang.org/race-detector)
-# 6. test coverage (http://blog.golang.org/cover)
+#   - gofmt         (https://golang.org/cmd/gofmt)
+#   - goimports     (https://godoc.org/cmd/goimports)
+#   - go vet        (https://golang.org/cmd/vet)
+#   - test coverage (https://blog.golang.org/cover)
 
-set -e
+COVERALLS_TOKEN=t47LG6BQsfLwb9WxB56hXUezvwpED6D11
+COVERALLS_MAX_ATTEMPTS=5
+TEST_DIRS="main.go mesos/"
+PKG_DIRS=". ./mesos/..."
 
-# Capture what test we should run
-TEST_SUITE=$1
+function _gofmt {
+    echo "Running 'gofmt'"
+    test -z "$(gofmt -l -d $TEST_DIRS | tee /dev/stderr)"
+}
 
-if [[ $TEST_SUITE == "unit" ]]; then
-    go get github.com/axw/gocov/gocov
-    go get github.com/mattn/goveralls
-    go get -u github.com/golang/lint/golint
+function _goimports {
+    echo "Running 'goimports'"
     go get golang.org/x/tools/cmd/goimports
+    test -z "$(goimports -l -d $TEST_DIRS | tee /dev/stderr)"
+}
+
+function _govet {
+    echo "Running 'go vet'"
+    go vet $PKG_DIRS
+}
+
+function _unit_test_with_coverage {
+    echo "Running unit tests..."
+
     go get github.com/smartystreets/goconvey/convey
     go get golang.org/x/tools/cmd/cover
 
-    COVERALLS_TOKEN=t47LG6BQsfLwb9WxB56hXUezvwpED6D11
-    TEST_DIRS="main.go mesos/"
-    VET_DIRS=". ./mesos/..."
-
-    set -e
-
-    # Automatic checks
-    echo "gofmt"
-    test -z "$(gofmt -l -d $TEST_DIRS | tee /dev/stderr)"
-
-    echo "goimports"
-    test -z "$(goimports -l -d $TEST_DIRS | tee /dev/stderr)"
-
-    # Useful but should not fail on link per: https://github.com/golang/lint
-    # "The suggestions made by golint are exactly that: suggestions. Golint is
-    # not perfect, and has both false positives and false negatives. Do not
-    # treat its output as a gold standard.  We will not be adding pragmas or
-    # other knobs to suppress specific warnings, so do not expect or require
-    # code to be completely "lint-free". In short, this tool is not, and will
-    # never be, trustworthy enough for its suggestions to be enforced
-    # automatically, for example as part of a build process"
-    # echo "golint"
-    # golint ./...
-
-    echo "go vet"
-    go vet $VET_DIRS
-    # go test -race ./... - Lets disable for now
-
-    # Run test coverage on each subdirectories and merge the coverage profile.
+    # As of Go 1.6, we cannot use the test profile flag with multiple packages.
+    # Therefore, we run 'go test' for each package, and concatenate the results
+    # into 'profile.cov'.
     echo "mode: count" > profile.cov
+    mkdir -p ./tmp
 
-    # Standard go tooling behavior is to ignore dirs with leading underscors
-    for dir in $(find . -maxdepth 10 -not -path './.git*' -not -path '*/_*' -not -path './examples/*' -not -path './scripts/*' -not -path './build/*' -not -path './Godeps/*' -not -path './vendor/*' -type d);
-    do
-        if ls $dir/*.go &> /dev/null; then
-            go test -v --tags=unit -covermode=count -coverprofile=$dir/profile.tmp $dir
-            if [ -f $dir/profile.tmp ]
-            then
-               cat $dir/profile.tmp | tail -n +2 >> profile.cov
-                rm $dir/profile.tmp
-            fi
-        fi
+    for import_path in $(go list -f={{.ImportPath}} ${PKG_DIRS}); do
+        package=$(basename ${import_path})
+        go test -v --tags=unit -covermode=count -coverprofile=./tmp/profile_${package}.cov $import_path
     done
 
-    go tool cover -func profile.cov
+    for f in ./tmp/profile_*.cov; do
+        tail -n +2 ${f} >> profile.cov
+    done
 
-    # Disabled Coveralls.io for now
-    # To submit the test coverage result to coveralls.io,
-    # use goveralls (https://github.com/mattn/goveralls)
-    # goveralls -coverprofile=profile.cov -service=travis-ci -repotoken t47LG6BQsfLwb9WxB56hXUezvwpED6D11
-    #
-    # If running inside Travis we update coveralls. We don't want his happening on Macs
-    # if [ "$TRAVIS" == "true" ]
-    # then
-    #     n=1
-    #     until [ $n -ge 6 ]
-    #     do
-    #         echo "posting to coveralls attempt $n of 5"
-    #         goveralls -v -coverprofile=profile.cov -service travis.ci -repotoken $COVERALLS_TOKEN && break
-    #         n=$[$n+1]
-    #         sleep 30
-    #     done
-    # fi
-elif [[ $TEST_SUITE == "integration" ]]; then
+    rm -rf ./tmp
+    go tool cover -func profile.cov
+}
+
+function _submit_to_coveralls {
+    # Only submit to Coveralls.io if we're running in Travis CI.
+    # We don't want this happening on dev machines!
+    if [[ $TRAVIS == "true" ]]; then
+        go get github.com/mattn/goveralls
+
+        for attempt in {1..${COVERALLS_MAX_ATTEMPTS}}; do
+            echo "Posting test coverage to Coveralls, attempt ${attempt} of ${COVERALLS_MAX_ATTEMPTS}"
+            goveralls -v -coverprofile=profile.cov -service=travis-ci -repotoken ${COVERALLS_TOKEN} && break
+        done
+    else
+        echo "Not running in Travis CI, not posting test coverage to Coveralls!"
+    fi
+}
+
+function _integration_test {
     echo "Running integration tests..."
     go test -v --tags=integration ./...
-fi
+}
 
+function main {
+    TEST_SUITE="$1"
+
+    if [[ $TEST_SUITE == "unit" ]]; then
+        _gofmt
+        _goimports
+        _govet
+        _unit_test_with_coverage
+        #_submit_to_coveralls
+    elif [[ $TEST_SUITE == "integration" ]]; then
+        _integration_test
+    else
+        echo "Error: unknown test suite ${TEST_SUITE}"
+        exit 1
+    fi
+}
+
+main "$@"

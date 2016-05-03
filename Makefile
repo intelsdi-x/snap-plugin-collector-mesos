@@ -6,6 +6,8 @@ clean:
 	-rm -rf build/
 	-rm -rf vendor/
 	-rm -rf Godeps/_workspace
+	-rm -rf tmp/
+	-rm -rf profile.cov
 deps:
 	bash -c "godep restore"
 test:
