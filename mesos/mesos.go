@@ -63,7 +63,7 @@ func (m *Mesos) GetMetricTypes(cfg plugin.PluginConfigType) ([]plugin.PluginMetr
 
 	metricTypes := []plugin.PluginMetricType{}
 
-	if configItems["master"] != nil {
+	if configItems["master"] != "" {
 		master_mts, err := master.GetMetricsSnapshot(configItems["master"].(string))
 		if err != nil {
 			return nil, err
@@ -75,7 +75,7 @@ func (m *Mesos) GetMetricTypes(cfg plugin.PluginConfigType) ([]plugin.PluginMetr
 		}
 	}
 
-	if configItems["agent"] != nil {
+	if configItems["agent"] != "" {
 		agent_mts, err := agent.GetMetricsSnapshot(configItems["agent"].(string))
 		if err != nil {
 			return nil, err
@@ -110,7 +110,7 @@ func getConfig(cfg interface{}) (map[string]interface{}, error) {
 	agent_cfg, agent_err := config.GetConfigItems(cfg, []string{"agent"})
 
 	if master_err != nil && agent_err != nil {
-		return nil, fmt.Errorf("error: no global config specified for \"master\" or \"agent\".")
+		return items, fmt.Errorf("error: no global config specified for \"master\" or \"agent\".")
 	}
 
 	items["master"], ok = master_cfg["master"].(string)
