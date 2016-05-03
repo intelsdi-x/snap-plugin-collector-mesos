@@ -68,6 +68,17 @@ function _submit_to_coveralls {
 
 function _integration_test {
     echo "Running integration tests..."
+
+    if [[ $TRAVIS == "true" ]]; then
+        echo "Detected that we're running in Travis CI. Provisioning Mesos master and agent..."
+        export SNAP_MESOS_MASTER="127.0.0.1:5050"
+        export SNAP_MESOS_AGENT="127.0.0.1:5051"
+
+        sudo ./scripts/provision-travis.sh --mesos_release ${MESOS_RELEASE} --ip_address 127.0.0.1
+    else
+        echo "Detected that we aren't running in Travis CI. Skipping provisioning of Mesos master and agent..."
+    fi
+
     go test -v --tags=integration ./...
 }
 

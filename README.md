@@ -28,6 +28,51 @@ well as metrics about running containers.
 ## Documentation
 ### Collected Metrics
 ### Examples
+There are examples of the snap global configuration and various tasks located in the [examples/](examples) directory.
+To get started with these examples and collect Mesos metrics and publish them to a file, you'll need to perform the
+following steps.
+
+*Note: these steps will work with the Vagrant development environment included in this repo. For more info on how
+to get started with Vagrant, please see [CONTRIBUTING.md](CONTRIBUTING.md).*
+
+Start the snap daemon in the background:
+
+```
+$ snapd --plugin-trust 0 --log-level 1 --config examples/configs/snap-config-example.json \
+    > /tmp/snap.log 2>&1 &
+```
+
+Assuming you're in the working directory for this plugin, load the Mesos collector plugin:
+
+```
+$ snapctl plugin load build/rootfs/snap-plugin-collector-mesos
+```
+
+Get the available metrics for your system:
+
+```
+$ snapctl metric list
+```
+
+Load the `passthru` processor plugin, and the `file` publisher plugin:
+
+```
+$ snapctl plugin load ${SNAP_PATH}/plugin/snap-processor-passthru
+$ snapctl plugin load ${SNAP_PATH}/plugin/snap-publisher-file
+```
+
+Create a new snap task:
+
+```
+$ snapctl task create -t examples/tasks/mesos-all-file.json
+```
+
+Stop the task:
+
+```
+$ snapctl task stop <task ID>
+```
+
 ### Known Issues and Caveats
   * Snap's metric catalog is populated only once, when the Mesos collector plugin is loaded. A configuration change on
   the master or agent could alter the metrics reported by Mesos. Therefore, if you modify the configuration of a Mesos

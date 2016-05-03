@@ -1,4 +1,6 @@
 language: go
+sudo: required
+dist: trusty
 
 go:
   - 1.5.4
@@ -9,6 +11,7 @@ env:
     - SNAP_PLUGIN_SOURCE=/home/travis/gopath/src/github.com/intelsdi-x/snap-plugin-collector-mesos
   matrix:
     - TEST=unit
+    - TEST=integration MESOS_RELEASE=0.28.1-2.0.20.ubuntu1404
 
 before_install:
   - go get github.com/tools/godep

@@ -19,6 +19,7 @@ package mesos
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/agent"
@@ -91,7 +92,74 @@ func (m *Mesos) GetMetricTypes(cfg plugin.PluginConfigType) ([]plugin.PluginMetr
 }
 
 func (m *Mesos) CollectMetrics(mts []plugin.PluginMetricType) ([]plugin.PluginMetricType, error) {
-	return []plugin.PluginMetricType{}, nil
+	configItems, err := getConfig(mts[0])
+	if err != nil {
+		return nil, err
+	}
+
+	requestedMaster := []string{}
+	requestedAgent := []string{}
+
+	for _, metricType := range mts {
+		// Mesos metrics are (mostly) returned in a flat JSON object and are '/' delimited, e.g.
+		// "slave/cpus_percent". Where they aren't (e.g. perf metrics), we've normalized them into a "/"
+		// string. Therefore, we need to return everything after the snap PluginMetricType namespace (e.g.
+		// "/intel/mesos/master") as a single string.
+		svc := metricType.Namespace()[2]
+		namespace := strings.Join(metricType.Namespace()[3:], "/")
+
+		switch {
+		case svc == "master":
+			requestedMaster = append(requestedMaster, namespace)
+		case svc == "agent":
+			requestedAgent = append(requestedAgent, namespace)
+		}
+	}
+
+	// Translate Mesos metrics into Snap PluginMetrics
+	now := time.Now()
+	metrics := []plugin.PluginMetricType{}
+
+	// TODO(roger): only return a master's metrics if master.IsLeader() returns true.
+	// If master.IsLeader() is false, this should wait and periodically poll the master
+	// to determine if leadership has changed and metrics should now be collected.
+	if configItems["master"] != "" && len(requestedMaster) > 0 {
+		snapshot, err := master.GetMetricsSnapshot(configItems["master"].(string))
+		if err != nil {
+			return nil, err
+		}
+		for _, key := range requestedMaster {
+			val, ok := snapshot[key]
+			if !ok {
+				return nil, fmt.Errorf("error: requested metric %s not found", val)
+			}
+
+			namespace := []string{pluginVendor, pluginName, "master", key}
+			metric := *plugin.NewPluginMetricType(namespace, now, configItems["master"].(string), nil, nil, val)
+			metrics = append(metrics, metric)
+		}
+	}
+
+	if configItems["agent"] != "" && len(requestedAgent) > 0 {
+		snapshot, err := agent.GetMetricsSnapshot(configItems["agent"].(string))
+		// TODO(roger): add agent '/monitor/statistics' metrics.
+
+		if err != nil {
+			return nil, err
+		}
+		for _, key := range requestedAgent {
+			val, ok := snapshot[key]
+			if !ok {
+				return nil, fmt.Errorf("error: requested metric %s not found", val)
+			}
+
+			namespace := []string{pluginVendor, pluginName, "agent", key}
+			metric := *plugin.NewPluginMetricType(namespace, now, configItems["agent"].(string), nil, nil, val)
+			metrics = append(metrics, metric)
+		}
+	}
+
+	return metrics, nil
 }
 
 func getConfig(cfg interface{}) (map[string]interface{}, error) {
