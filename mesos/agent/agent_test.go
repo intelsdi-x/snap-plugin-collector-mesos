@@ -113,7 +113,12 @@ func AgentStatisticsHandler(executors []Executor) http.HandlerFunc {
 
 func TestGetAgentStatistics(t *testing.T) {
 	Convey("When mesos agent statistics are requested", t, func() {
-		execs, err := GetAgentStatistics(server.URL)
+		u, err := extractHostFromURL(server.URL)
+		if err != nil {
+			panic(err)
+		}
+
+		execs, err := GetAgentStatistics(u)
 
 		Convey("Then no error should be reporeted", func() {
 			So(err, ShouldBeNil)

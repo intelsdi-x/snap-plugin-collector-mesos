@@ -17,10 +17,10 @@ limitations under the License.
 package agent
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
+	"time"
+
+	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/client"
 )
 
 type Executor struct {
@@ -42,25 +42,11 @@ func (e *Executor) GetExecutorStatistic(stat string) (float64, error) {
 	return 0, fmt.Errorf("Requested stat %s is not available for %s", stat, e.ID)
 }
 
-func GetAgentStatistics(url string) ([]Executor, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf(resp.Status)
-	}
-	defer resp.Body.Close()
-
-	content, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
+func GetAgentStatistics(host string) ([]Executor, error) {
 	var executors []Executor
-	err = json.Unmarshal(content, &executors)
-	if err != nil {
+
+	c := client.NewClient(host, "/monitor/statistics", time.Duration(30))
+	if err := c.Fetch(&executors); err != nil {
 		return nil, err
 	}
 
@@ -79,25 +65,9 @@ func GetAgentStatistics(url string) ([]Executor, error) {
 func GetMetricsSnapshot(host string) (map[string]float64, error) {
 	data := map[string]float64{}
 
-	// TODO(roger): abstract the http client for consistent use throughout this plugin
-	url := "http://" + host + "/metrics/snapshot"
-	resp, err := http.Get(url)
-	if err != nil {
+	c := client.NewClient(host, "/metrics/snapshot", time.Duration(5))
+	if err := c.Fetch(&data); err != nil {
 		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return data, fmt.Errorf("fetch error: %s", resp.Status)
-	}
-
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return data, fmt.Errorf("read error: %s: %v\n", url, err)
-	}
-
-	if err := json.Unmarshal(b, &data); err != nil {
-		return data, fmt.Errorf("unmarshal error: %s: %v\n", b, err)
 	}
 
 	return data, nil
