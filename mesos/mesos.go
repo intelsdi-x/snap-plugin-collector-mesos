@@ -27,6 +27,7 @@ import (
 	"github.com/intelsdi-x/snap-plugin-utilities/config"
 	"github.com/intelsdi-x/snap/control/plugin"
 	"github.com/intelsdi-x/snap/control/plugin/cpolicy"
+	"github.com/intelsdi-x/snap/core"
 )
 
 const (
@@ -56,42 +57,44 @@ func (m *Mesos) GetConfigPolicy() (*cpolicy.ConfigPolicy, error) {
 	return cpolicy.New(), nil
 }
 
-func (m *Mesos) GetMetricTypes(cfg plugin.PluginConfigType) ([]plugin.PluginMetricType, error) {
+func (m *Mesos) GetMetricTypes(cfg plugin.ConfigType) ([]plugin.MetricType, error) {
 	configItems, err := getConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	metricTypes := []plugin.PluginMetricType{}
+	metricTypes := []plugin.MetricType{}
 
 	if configItems["master"] != "" {
-		master_mts, err := master.GetMetricsSnapshot(configItems["master"].(string))
+		master_mts, err := master.GetMetricsSnapshot(configItems["master"])
 		if err != nil {
 			return nil, err
 		}
 
 		for key, _ := range master_mts {
-			namespace := append([]string{pluginVendor, pluginName, "master"}, strings.Split(key, "/")...)
-			metricTypes = append(metricTypes, plugin.PluginMetricType{Namespace_: namespace})
+			namespace := core.NewNamespace(pluginVendor, pluginName, "master").
+				AddStaticElements(strings.Split(key, "/")...)
+			metricTypes = append(metricTypes, plugin.MetricType{Namespace_: namespace})
 		}
 	}
 
 	if configItems["agent"] != "" {
-		agent_mts, err := agent.GetMetricsSnapshot(configItems["agent"].(string))
+		agent_mts, err := agent.GetMetricsSnapshot(configItems["agent"])
 		if err != nil {
 			return nil, err
 		}
 
 		for key, _ := range agent_mts {
-			namespace := append([]string{pluginVendor, pluginName, "agent"}, strings.Split(key, "/")...)
-			metricTypes = append(metricTypes, plugin.PluginMetricType{Namespace_: namespace})
+			namespace := core.NewNamespace(pluginVendor, pluginName, "agent").
+				AddStaticElements(strings.Split(key, "/")...)
+			metricTypes = append(metricTypes, plugin.MetricType{Namespace_: namespace})
 		}
 	}
 
 	return metricTypes, nil
 }
 
-func (m *Mesos) CollectMetrics(mts []plugin.PluginMetricType) ([]plugin.PluginMetricType, error) {
+func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, error) {
 	configItems, err := getConfig(mts[0])
 	if err != nil {
 		return nil, err
@@ -103,10 +106,10 @@ func (m *Mesos) CollectMetrics(mts []plugin.PluginMetricType) ([]plugin.PluginMe
 	for _, metricType := range mts {
 		// Mesos metrics are (mostly) returned in a flat JSON object and are '/' delimited, e.g.
 		// "slave/cpus_percent". Where they aren't (e.g. perf metrics), we've normalized them into a "/"
-		// string. Therefore, we need to return everything after the snap PluginMetricType namespace (e.g.
+		// string. Therefore, we need to return everything after the snap MetricType namespace (e.g.
 		// "/intel/mesos/master") as a single string.
-		svc := metricType.Namespace()[2]
-		namespace := strings.Join(metricType.Namespace()[3:], "/")
+		svc := metricType.Namespace().Strings()[2]
+		namespace := strings.Join(metricType.Namespace().Strings()[3:], "/")
 
 		switch {
 		case svc == "master":
@@ -118,13 +121,13 @@ func (m *Mesos) CollectMetrics(mts []plugin.PluginMetricType) ([]plugin.PluginMe
 
 	// Translate Mesos metrics into Snap PluginMetrics
 	now := time.Now()
-	metrics := []plugin.PluginMetricType{}
+	metrics := []plugin.MetricType{}
 
 	// TODO(roger): only return a master's metrics if master.IsLeader() returns true.
 	// If master.IsLeader() is false, this should wait and periodically poll the master
 	// to determine if leadership has changed and metrics should now be collected.
 	if configItems["master"] != "" && len(requestedMaster) > 0 {
-		snapshot, err := master.GetMetricsSnapshot(configItems["master"].(string))
+		snapshot, err := master.GetMetricsSnapshot(configItems["master"])
 		if err != nil {
 			return nil, err
 		}
@@ -134,14 +137,16 @@ func (m *Mesos) CollectMetrics(mts []plugin.PluginMetricType) ([]plugin.PluginMe
 				return nil, fmt.Errorf("error: requested metric %s not found", val)
 			}
 
-			namespace := []string{pluginVendor, pluginName, "master", key}
-			metric := *plugin.NewPluginMetricType(namespace, now, configItems["master"].(string), nil, nil, val)
+			namespace := core.NewNamespace(pluginVendor, pluginName, "master", key)
+			//TODO(kromar): is it possible to provide unit NewMetricType(ns, time, tags, unit, value)?
+			// I'm leaving empty string for now...
+			metric := *plugin.NewMetricType(namespace, now, nil, "", val)
 			metrics = append(metrics, metric)
 		}
 	}
 
 	if configItems["agent"] != "" && len(requestedAgent) > 0 {
-		snapshot, err := agent.GetMetricsSnapshot(configItems["agent"].(string))
+		snapshot, err := agent.GetMetricsSnapshot(configItems["agent"])
 		// TODO(roger): add agent '/monitor/statistics' metrics.
 
 		if err != nil {
@@ -153,8 +158,9 @@ func (m *Mesos) CollectMetrics(mts []plugin.PluginMetricType) ([]plugin.PluginMe
 				return nil, fmt.Errorf("error: requested metric %s not found", val)
 			}
 
-			namespace := []string{pluginVendor, pluginName, "agent", key}
-			metric := *plugin.NewPluginMetricType(namespace, now, configItems["agent"].(string), nil, nil, val)
+			namespace := core.NewNamespace(pluginVendor, pluginName, "agent", key)
+			//TODO(kromar): units here also?
+			metric := *plugin.NewMetricType(namespace, now, nil, "", val)
 			metrics = append(metrics, metric)
 		}
 	}
@@ -162,8 +168,8 @@ func (m *Mesos) CollectMetrics(mts []plugin.PluginMetricType) ([]plugin.PluginMe
 	return metrics, nil
 }
 
-func getConfig(cfg interface{}) (map[string]interface{}, error) {
-	items := make(map[string]interface{})
+func getConfig(cfg interface{}) (map[string]string, error) {
+	items := make(map[string]string)
 	var ok bool
 
 	// Note: although config.GetConfigItems can accept multiple config parameter names, it appears that if
@@ -172,21 +178,22 @@ func getConfig(cfg interface{}) (map[string]interface{}, error) {
 	// test for the existence of the configuration parameter to determine which metric types are available.
 
 	// We expect the value of "master" in the global config to follow the convention "192.168.99.100:5050"
-	master_cfg, master_err := config.GetConfigItems(cfg, []string{"master"})
+
+	master_cfg, master_err := config.GetConfigItem(cfg, "master")
 
 	// We expect the value of "agent" in the global config to follow the convention "192.168.99.100:5051"
-	agent_cfg, agent_err := config.GetConfigItems(cfg, []string{"agent"})
+	agent_cfg, agent_err := config.GetConfigItem(cfg, "agent")
 
 	if master_err != nil && agent_err != nil {
-		return items, fmt.Errorf("error: no global config specified for \"master\" or \"agent\".")
+		return items, fmt.Errorf("error: no global config specified for \"master\" and \"agent\".")
 	}
 
-	items["master"], ok = master_cfg["master"].(string)
+	items["master"], ok = master_cfg.(string)
 	if !ok {
 		log.Warn("no global config specified for \"master\". only \"agent\" metrics will be collected.")
 	}
 
-	items["agent"], ok = agent_cfg["agent"].(string)
+	items["agent"], ok = agent_cfg.(string)
 	if !ok {
 		log.Warn("no global config specified for \"agent\". only \"master\" metrics will be collected.")
 	}

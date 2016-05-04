@@ -54,11 +54,11 @@ func TestMesos_getConfig(t *testing.T) {
 		Convey("When only a master is provided, getConfig() should return only the master value", func() {
 			node := cdata.NewNode()
 			node.AddItem("master", ctypes.ConfigValueStr{Value: "mesos-master.example.com:5050"})
-			snapCfg := plugin.PluginConfigType{ConfigDataNode: node}
+			snapCfg := plugin.ConfigType{ConfigDataNode: node}
 
 			parsedCfg, err := getConfig(snapCfg)
 
-			So(parsedCfg["master"].(string), ShouldEqual, "mesos-master.example.com:5050")
+			So(parsedCfg["master"], ShouldEqual, "mesos-master.example.com:5050")
 			So(parsedCfg["agent"], ShouldEqual, "")
 			So(err, ShouldBeNil)
 		})
@@ -66,12 +66,12 @@ func TestMesos_getConfig(t *testing.T) {
 		Convey("When only an agent is provided, getConfig() should return only the agent value", func() {
 			node := cdata.NewNode()
 			node.AddItem("agent", ctypes.ConfigValueStr{Value: "mesos-agent.example.com:5051"})
-			snapCfg := plugin.PluginConfigType{ConfigDataNode: node}
+			snapCfg := plugin.ConfigType{ConfigDataNode: node}
 
 			parsedCfg, err := getConfig(snapCfg)
 
 			So(parsedCfg["master"], ShouldEqual, "")
-			So(parsedCfg["agent"].(string), ShouldEqual, "mesos-agent.example.com:5051")
+			So(parsedCfg["agent"], ShouldEqual, "mesos-agent.example.com:5051")
 			So(err, ShouldBeNil)
 		})
 
@@ -79,7 +79,7 @@ func TestMesos_getConfig(t *testing.T) {
 			node := cdata.NewNode()
 			node.AddItem("master", ctypes.ConfigValueStr{Value: "mesos-master.example.com:5050"})
 			node.AddItem("agent", ctypes.ConfigValueStr{Value: "mesos-agent.example.com:5051"})
-			snapCfg := plugin.PluginConfigType{ConfigDataNode: node}
+			snapCfg := plugin.ConfigType{ConfigDataNode: node}
 
 			parsedCfg, err := getConfig(snapCfg)
 
@@ -90,7 +90,7 @@ func TestMesos_getConfig(t *testing.T) {
 		Convey("When both master and agent are missing, getConfig() should return an error", func() {
 			node := cdata.NewNode()
 			node.AddItem("foo", ctypes.ConfigValueStr{Value: "bar"})
-			snapCfg := plugin.PluginConfigType{ConfigDataNode: node}
+			snapCfg := plugin.ConfigType{ConfigDataNode: node}
 
 			parsedCfg, err := getConfig(snapCfg)
 
