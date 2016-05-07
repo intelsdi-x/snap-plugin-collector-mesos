@@ -1,4 +1,4 @@
-// +build linux
+// +build unit
 
 /*
 Copyright 2016 Intel Corporation
