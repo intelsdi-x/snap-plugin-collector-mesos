@@ -17,7 +17,6 @@ limitations under the License.
 package agent
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/client"
@@ -33,28 +32,6 @@ type Executor struct {
 	Source     string `json:"source"`
 	Framework  string `json:"framework_id"`
 	Statistics *mesos_pb2.ResourceStatistics
-}
-
-func (e *Executor) GetExecutorStatistic(stat string) (float64, error) {
-	if val, ok := e.Statistics[stat]; ok {
-		return val.(float64), nil
-	} else if perf, ok := e.Statistics["perf"]; ok {
-		if val, ok := perf.(map[string]interface{})[stat]; ok {
-			return val.(float64), nil
-		}
-	}
-	return 0, fmt.Errorf("Requested stat %s is not available for %s", stat, e.ID)
-}
-
-func GetAgentStatistics(host string) ([]Executor, error) {
-	var executors []Executor
-
-	c := client.NewClient(host, "/monitor/statistics", time.Duration(30))
-	if err := c.Fetch(&executors); err != nil {
-		return nil, err
-	}
-
-	return executors, nil
 }
 
 // Collect metrics from the '/metrics/snapshot' endpoint on the agent.  The '/metrics/snapshot' endpoint returns JSON,
@@ -75,4 +52,19 @@ func GetMetricsSnapshot(host string) (map[string]float64, error) {
 	}
 
 	return data, nil
+}
+
+// Collect metrics from the '/monitor/statistics' endpoint on the agent. This endpoint returns JSON, and all metrics
+// contained in the endpoint use a string as the key. Depending on features enabled on the Mesos agent, additional
+// metrics might be available under either the "statistics" object, or additional nested objects (e.g. "perf") as
+// defined by the Executor structure, and the structures in mesos_pb2.ResourceStatistics.
+func GetMonitoringStatistics(host string) ([]Executor, error) {
+	var executors []Executor
+
+	c := client.NewClient(host, "/monitor/statistics", time.Duration(30))
+	if err := c.Fetch(&executors); err != nil {
+		return nil, err
+	}
+
+	return executors, nil
 }
