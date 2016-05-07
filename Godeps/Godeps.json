@@ -9,6 +9,10 @@
 			"Rev": "4b6ea7319e214d98c938f12692336f7ca9348d6b"
 		},
 		{
+			"ImportPath": "github.com/golang/protobuf/proto",
+			"Rev": "7cc19b78d562895b13596ddce7aafb59dd789318"
+		},
+		{
 			"ImportPath": "github.com/gopherjs/gopherjs/js",
 			"Comment": "go1.5-43-gf10744b",
 			"Rev": "f10744b1512e8cf31ec55b49ddeb1c93ed2de46e"
