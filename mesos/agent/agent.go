@@ -21,14 +21,18 @@ import (
 	"time"
 
 	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/client"
+	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/mesos_pb2"
 )
 
+// The "/monitor/statistics" endpoint returns an array of JSON objects. Its top-level structure isn't defined by a
+// protobuf, but the "statistics" object (and everything under it) is. For the actual Mesos implementation, see
+// https://github.com/apache/mesos/blob/0.28.1/src/slave/monitor.cpp#L130-L148
 type Executor struct {
-	ID         string                 `json:"executor_id"`
-	Name       string                 `json:"executor_name"`
-	Source     string                 `json:"source"`
-	Framework  string                 `json:"framework_id"`
-	Statistics map[string]interface{} `json:"statistics"`
+	ID         string `json:"executor_id"`
+	Name       string `json:"executor_name"`
+	Source     string `json:"source"`
+	Framework  string `json:"framework_id"`
+	Statistics *mesos_pb2.ResourceStatistics
 }
 
 func (e *Executor) GetExecutorStatistic(stat string) (float64, error) {
