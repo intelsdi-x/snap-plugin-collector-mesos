@@ -89,6 +89,15 @@ func (m *Mesos) GetMetricTypes(cfg plugin.ConfigType) ([]plugin.MetricType, erro
 				AddStaticElements(strings.Split(key, "/")...)
 			metricTypes = append(metricTypes, plugin.MetricType{Namespace_: namespace})
 		}
+
+		for _, key := range agent.GetMonitoringStatisticsMetricTypes() {
+			namespace := core.NewNamespace(pluginVendor, pluginName, "agent", "executor").
+				AddDynamicElement("framework_id", "Framework ID").
+				AddDynamicElement("executor_id", "Executor ID").
+				AddStaticElements(strings.Split(key, "/")...)
+
+			metricTypes = append(metricTypes, plugin.MetricType{Namespace_: namespace})
+		}
 	}
 
 	return metricTypes, nil

@@ -17,6 +17,8 @@ limitations under the License.
 package agent
 
 import (
+	"reflect"
+	"strings"
 	"time"
 
 	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/client"
@@ -67,4 +69,62 @@ func GetMonitoringStatistics(host string) ([]Executor, error) {
 	}
 
 	return executors, nil
+}
+
+// Recursively traverse the Executor struct, building "/"-delimited strings that resemble snap metric types.
+func GetMonitoringStatisticsMetricTypes() []string {
+	namespaces := []string{}
+
+	// To prevent reflect from returning nil, define a skeleton of all possible nested structs
+	// TODO(roger): is it possible to (easily) query the Mesos agent for enabled features?
+	e := &Executor{
+		Statistics: &mesos_pb2.ResourceStatistics{
+			// TODO(roger): implement NetSnmpStatistics and NetTrafficControlStatistics in a future version
+			Perf: &mesos_pb2.PerfStatistics{},
+		},
+	}
+
+	var buildNamespaceRecursively func(ns string, v reflect.Value)
+	buildNamespaceRecursively = func(ns string, v reflect.Value) {
+		switch v.Kind() {
+		case reflect.Ptr:
+			buildNamespaceRecursively(ns, v.Elem())
+		case reflect.Struct:
+			for i := 0; i < v.NumField(); i++ {
+				fieldInfo := v.Type().Field(i)
+				tag := strings.Split(fieldInfo.Tag.Get("json"), ",")[0] // ignore "omitempty" if it exists
+				if tag == "-" {
+					continue
+				}
+				if tag == "" {
+					tag = strings.ToLower(fieldInfo.Name)
+				}
+
+				// Only consider valid metric namespaces. For example: "/statistics" should not be
+				// considered, because it's a pointer to mesos_pb2.ResourceStatistics, but
+				// "/statistics/cpus_user_time_secs" should be considered because it's a float64.
+				f := fieldInfo.Type
+				if v.Field(i).Kind() == reflect.Ptr {
+					f = fieldInfo.Type.Elem()
+				}
+
+				nsNext := ""
+				if ns == "" {
+					nsNext = tag
+				} else {
+					nsNext = strings.Join([]string{ns, tag}, "/")
+				}
+
+				switch f.Kind() {
+				case reflect.Uint32, reflect.Uint64, reflect.Float64:
+					namespaces = append(namespaces, nsNext)
+				}
+
+				buildNamespaceRecursively(nsNext, v.Field(i))
+			}
+		}
+	}
+
+	buildNamespaceRecursively("", reflect.ValueOf(e))
+	return namespaces
 }
