@@ -17,23 +17,22 @@ limitations under the License.
 package agent
 
 import (
-	"reflect"
-	"strings"
 	"time"
 
 	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/client"
 	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/mesos_pb2"
+	"github.com/intelsdi-x/snap-plugin-utilities/ns"
 )
 
 // The "/monitor/statistics" endpoint returns an array of JSON objects. Its top-level structure isn't defined by a
 // protobuf, but the "statistics" object (and everything under it) is. For the actual Mesos implementation, see
 // https://github.com/apache/mesos/blob/0.28.1/src/slave/monitor.cpp#L130-L148
 type Executor struct {
-	ID         string `json:"executor_id"`
-	Name       string `json:"executor_name"`
-	Source     string `json:"source"`
-	Framework  string `json:"framework_id"`
-	Statistics *mesos_pb2.ResourceStatistics
+	ID         string                        `json:"executor_id"`
+	Name       string                        `json:"executor_name"`
+	Source     string                        `json:"source"`
+	Framework  string                        `json:"framework_id"`
+	Statistics *mesos_pb2.ResourceStatistics `json:"statistics"`
 }
 
 // Collect metrics from the '/metrics/snapshot' endpoint on the agent.  The '/metrics/snapshot' endpoint returns JSON,
@@ -72,59 +71,19 @@ func GetMonitoringStatistics(host string) ([]Executor, error) {
 }
 
 // Recursively traverse the Executor struct, building "/"-delimited strings that resemble snap metric types.
-func GetMonitoringStatisticsMetricTypes() []string {
+func GetMonitoringStatisticsMetricTypes() ([]string, error) {
+	// TODO(roger): supporting NetTrafficControlStatistics means adding another dynamic metric to the plugin.
+	// When we're ready to do this, remove ns.InspectEmptyContainers(ns.AlwaysFalse) so this defaults to true.
+
 	namespaces := []string{}
+	err := ns.FromCompositeObject(
+		&mesos_pb2.ResourceStatistics{}, "statistics", &namespaces, ns.InspectEmptyContainers(ns.AlwaysFalse))
 
-	// To prevent reflect from returning nil, define a skeleton of all possible nested structs
-	// TODO(roger): is it possible to (easily) query the Mesos agent for enabled features?
-	e := &Executor{
-		Statistics: &mesos_pb2.ResourceStatistics{
-			// TODO(roger): implement NetSnmpStatistics and NetTrafficControlStatistics in a future version
-			Perf: &mesos_pb2.PerfStatistics{},
-		},
+	if err != nil {
+		return nil, err
 	}
 
-	var buildNamespaceRecursively func(ns string, v reflect.Value)
-	buildNamespaceRecursively = func(ns string, v reflect.Value) {
-		switch v.Kind() {
-		case reflect.Ptr:
-			buildNamespaceRecursively(ns, v.Elem())
-		case reflect.Struct:
-			for i := 0; i < v.NumField(); i++ {
-				fieldInfo := v.Type().Field(i)
-				tag := strings.Split(fieldInfo.Tag.Get("json"), ",")[0] // ignore "omitempty" if it exists
-				if tag == "-" {
-					continue
-				}
-				if tag == "" {
-					tag = strings.ToLower(fieldInfo.Name)
-				}
-
-				// Only consider valid metric namespaces. For example: "/statistics" should not be
-				// considered, because it's a pointer to mesos_pb2.ResourceStatistics, but
-				// "/statistics/cpus_user_time_secs" should be considered because it's a float64.
-				f := fieldInfo.Type
-				if v.Field(i).Kind() == reflect.Ptr {
-					f = fieldInfo.Type.Elem()
-				}
-
-				nsNext := ""
-				if ns == "" {
-					nsNext = tag
-				} else {
-					nsNext = strings.Join([]string{ns, tag}, "/")
-				}
-
-				switch f.Kind() {
-				case reflect.Uint32, reflect.Uint64, reflect.Float64:
-					namespaces = append(namespaces, nsNext)
-				}
-
-				buildNamespaceRecursively(nsNext, v.Field(i))
-			}
-		}
-	}
-
-	buildNamespaceRecursively("", reflect.ValueOf(e))
-	return namespaces
+	// TODO(roger): is it possible to (easily) query the Mesos agent for enabled features,
+	// so that we can avoid returning a metric type that is impossible to collect?
+	return namespaces, nil
 }

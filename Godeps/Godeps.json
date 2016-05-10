@@ -22,6 +22,14 @@
 			"Rev": "04621af7a3979bcb8aaf08c3b6542b43fe0bf6cf"
 		},
 		{
+			"ImportPath": "github.com/intelsdi-x/snap-plugin-utilities/ns",
+			"Rev": "04621af7a3979bcb8aaf08c3b6542b43fe0bf6cf"
+		},
+		{
+			"ImportPath": "github.com/intelsdi-x/snap-plugin-utilities/str",
+			"Rev": "04621af7a3979bcb8aaf08c3b6542b43fe0bf6cf"
+		},
+		{
 			"ImportPath": "github.com/intelsdi-x/snap/control/plugin",
 			"Comment": "v0.13.0-beta-73-g170c8d3",
 			"Rev": "170c8d390d6a03a785c5af7e14ceb949886cfb23"
@@ -80,6 +88,11 @@
 			"ImportPath": "github.com/jtolds/gls",
 			"Comment": "v4.2.0",
 			"Rev": "8ddce2a84170772b95dd5d576c48d517b22cac63"
+		},
+		{
+			"ImportPath": "github.com/oleiade/reflections",
+			"Comment": "0.1.2-2-g632977f",
+			"Rev": "632977f98cd34d217c4b57d0840ec188b3d3dcaf"
 		},
 		{
 			"ImportPath": "github.com/robfig/cron",
