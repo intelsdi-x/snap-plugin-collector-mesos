@@ -17,40 +17,22 @@ limitations under the License.
 package agent
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/client"
+	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/mesos_pb2"
+	"github.com/intelsdi-x/snap-plugin-utilities/ns"
 )
 
+// The "/monitor/statistics" endpoint returns an array of JSON objects. Its top-level structure isn't defined by a
+// protobuf, but the "statistics" object (and everything under it) is. For the actual Mesos implementation, see
+// https://github.com/apache/mesos/blob/0.28.1/src/slave/monitor.cpp#L130-L148
 type Executor struct {
-	ID         string                 `json:"executor_id"`
-	Name       string                 `json:"executor_name"`
-	Source     string                 `json:"source"`
-	Framework  string                 `json:"framework_id"`
-	Statistics map[string]interface{} `json:"statistics"`
-}
-
-func (e *Executor) GetExecutorStatistic(stat string) (float64, error) {
-	if val, ok := e.Statistics[stat]; ok {
-		return val.(float64), nil
-	} else if perf, ok := e.Statistics["perf"]; ok {
-		if val, ok := perf.(map[string]interface{})[stat]; ok {
-			return val.(float64), nil
-		}
-	}
-	return 0, fmt.Errorf("Requested stat %s is not available for %s", stat, e.ID)
-}
-
-func GetAgentStatistics(host string) ([]Executor, error) {
-	var executors []Executor
-
-	c := client.NewClient(host, "/monitor/statistics", time.Duration(30))
-	if err := c.Fetch(&executors); err != nil {
-		return nil, err
-	}
-
-	return executors, nil
+	ID         string                        `json:"executor_id"`
+	Name       string                        `json:"executor_name"`
+	Source     string                        `json:"source"`
+	Framework  string                        `json:"framework_id"`
+	Statistics *mesos_pb2.ResourceStatistics `json:"statistics"`
 }
 
 // Collect metrics from the '/metrics/snapshot' endpoint on the agent.  The '/metrics/snapshot' endpoint returns JSON,
@@ -71,4 +53,37 @@ func GetMetricsSnapshot(host string) (map[string]float64, error) {
 	}
 
 	return data, nil
+}
+
+// Collect metrics from the '/monitor/statistics' endpoint on the agent. This endpoint returns JSON, and all metrics
+// contained in the endpoint use a string as the key. Depending on features enabled on the Mesos agent, additional
+// metrics might be available under either the "statistics" object, or additional nested objects (e.g. "perf") as
+// defined by the Executor structure, and the structures in mesos_pb2.ResourceStatistics.
+func GetMonitoringStatistics(host string) ([]Executor, error) {
+	var executors []Executor
+
+	c := client.NewClient(host, "/monitor/statistics", time.Duration(30))
+	if err := c.Fetch(&executors); err != nil {
+		return nil, err
+	}
+
+	return executors, nil
+}
+
+// Recursively traverse the Executor struct, building "/"-delimited strings that resemble snap metric types.
+func GetMonitoringStatisticsMetricTypes() ([]string, error) {
+	// TODO(roger): supporting NetTrafficControlStatistics means adding another dynamic metric to the plugin.
+	// When we're ready to do this, remove ns.InspectEmptyContainers(ns.AlwaysFalse) so this defaults to true.
+
+	namespaces := []string{}
+	err := ns.FromCompositeObject(
+		&mesos_pb2.ResourceStatistics{}, "statistics", &namespaces, ns.InspectEmptyContainers(ns.AlwaysFalse))
+
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO(roger): is it possible to (easily) query the Mesos agent for enabled features,
+	// so that we can avoid returning a metric type that is impossible to collect?
+	return namespaces, nil
 }

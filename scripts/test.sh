@@ -9,6 +9,7 @@ COVERALLS_TOKEN=t47LG6BQsfLwb9WxB56hXUezvwpED6D11
 COVERALLS_MAX_ATTEMPTS=5
 TEST_DIRS="main.go mesos/"
 PKG_DIRS=". ./mesos/..."
+IGNORE_PKGS="mesos_pb2"
 
 function _gofmt {
     echo "Running 'gofmt'"
@@ -40,6 +41,7 @@ function _unit_test_with_coverage {
 
     for import_path in $(go list -f={{.ImportPath}} ${PKG_DIRS}); do
         package=$(basename ${import_path})
+        [[ "$IGNORE_PKGS" =~ $package ]] && continue
         go test -v --tags=unit -covermode=count -coverprofile=./tmp/profile_${package}.cov $import_path
     done
 
