@@ -150,7 +150,8 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 			namespace := core.NewNamespace(pluginVendor, pluginName, "master", key)
 			//TODO(kromar): is it possible to provide unit NewMetricType(ns, time, tags, unit, value)?
 			// I'm leaving empty string for now...
-			metric := *plugin.NewMetricType(namespace, now, nil, "", val)
+			tags := map[string]string{"source": configItems["master"]}
+			metric := *plugin.NewMetricType(namespace, now, tags, "", val)
 			metrics = append(metrics, metric)
 		}
 	}
@@ -170,7 +171,8 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 
 			namespace := core.NewNamespace(pluginVendor, pluginName, "agent", key)
 			//TODO(kromar): units here also?
-			metric := *plugin.NewMetricType(namespace, now, nil, "", val)
+			tags := map[string]string{"source": configItems["agent"]}
+			metric := *plugin.NewMetricType(namespace, now, tags, "", val)
 			metrics = append(metrics, metric)
 		}
 	}
