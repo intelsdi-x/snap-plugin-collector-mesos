@@ -19,7 +19,10 @@
         "/intel/mesos/agent/slave/tasks_running": {},
         "/intel/mesos/agent/system/load_1min": {},
         "/intel/mesos/agent/system/load_5min": {},
-        "/intel/mesos/agent/system/load_15min": {}
+        "/intel/mesos/agent/system/load_15min": {},
+        "/intel/mesos/agent/*/*/cpus_system_time_secs": {},
+        "/intel/mesos/agent/*/*/cpus_user_time_secs": {},
+        "/intel/mesos/agent/*/*/mem_total_bytes": {}
       },
       "config": {},
       "process": [

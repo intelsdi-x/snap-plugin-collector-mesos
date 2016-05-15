@@ -25,6 +25,7 @@ import (
 	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/agent"
 	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/master"
 	"github.com/intelsdi-x/snap-plugin-utilities/config"
+	"github.com/intelsdi-x/snap-plugin-utilities/ns"
 	"github.com/intelsdi-x/snap/control/plugin"
 	"github.com/intelsdi-x/snap/control/plugin/cpolicy"
 	"github.com/intelsdi-x/snap/core"
@@ -141,6 +142,9 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 		if err != nil {
 			return nil, err
 		}
+
+		tags := map[string]string{"source": configItems["master"]}
+
 		for _, key := range requestedMaster {
 			val, ok := snapshot[key]
 			if !ok {
@@ -150,7 +154,6 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 			namespace := core.NewNamespace(pluginVendor, pluginName, "master", key)
 			//TODO(kromar): is it possible to provide unit NewMetricType(ns, time, tags, unit, value)?
 			// I'm leaving empty string for now...
-			tags := map[string]string{"source": configItems["master"]}
 			metric := *plugin.NewMetricType(namespace, now, tags, "", val)
 			metrics = append(metrics, metric)
 		}
@@ -158,22 +161,55 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 
 	if configItems["agent"] != "" && len(requestedAgent) > 0 {
 		snapshot, err := agent.GetMetricsSnapshot(configItems["agent"])
-		// TODO(roger): add agent '/monitor/statistics' metrics.
-
 		if err != nil {
 			return nil, err
 		}
-		for _, key := range requestedAgent {
-			val, ok := snapshot[key]
-			if !ok {
-				return nil, fmt.Errorf("error: requested metric %s not found", val)
-			}
 
-			namespace := core.NewNamespace(pluginVendor, pluginName, "agent", key)
-			//TODO(kromar): units here also?
-			tags := map[string]string{"source": configItems["agent"]}
-			metric := *plugin.NewMetricType(namespace, now, tags, "", val)
-			metrics = append(metrics, metric)
+		executors, err := agent.GetMonitoringStatistics(configItems["agent"])
+		if err != nil {
+			return nil, err
+		}
+
+		tags := map[string]string{"source": configItems["agent"]}
+
+		for _, key := range requestedAgent {
+			var val interface{}
+			var ok bool = false
+
+			if strings.Split(key, "/")[0] == "*" {
+				// Iterate through the array of executors returned by GetMonitoringStatistics()
+				for _, exec := range executors {
+					sep := "/"
+					m := strings.Split(key, sep)[2:]
+					val = ns.GetValueByNamespace(exec.Statistics, m)
+					if val == nil {
+						return nil, fmt.Errorf("error: requested metric %v not found", key)
+					}
+
+					// TODO(roger): we can lookup the ID returned by exec.Framework and return a
+					// human-readable name if that's desired. So instead of the user needing to
+					// make sense of '1101bcf1-4b17-419d-8bbb-6d5b2c9e5eb3-0000', we could instead
+					// return 'marathon' or 'chronos'.
+					namespace := core.NewNamespace(
+						pluginVendor, pluginName, "agent", exec.Framework, exec.ID,
+						strings.Join(m, sep))
+					// TODO(roger): units
+					metric := *plugin.NewMetricType(namespace, now, tags, "", val)
+					metrics = append(metrics, metric)
+
+				}
+			} else {
+				// Get requested metrics from the snapshot map
+				val, ok = snapshot[key]
+				if !ok {
+					return nil, fmt.Errorf("error: requested metric %v not found", key)
+				}
+
+				namespace := core.NewNamespace(pluginVendor, pluginName, "agent", key)
+				//TODO(kromar): units here also?
+				metric := *plugin.NewMetricType(namespace, now, tags, "", val)
+				metrics = append(metrics, metric)
+			}
 		}
 	}
 
@@ -190,7 +226,6 @@ func getConfig(cfg interface{}) (map[string]string, error) {
 	// test for the existence of the configuration parameter to determine which metric types are available.
 
 	// We expect the value of "master" in the global config to follow the convention "192.168.99.100:5050"
-
 	master_cfg, master_err := config.GetConfigItem(cfg, "master")
 
 	// We expect the value of "agent" in the global config to follow the convention "192.168.99.100:5051"

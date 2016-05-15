@@ -19,9 +19,13 @@ limitations under the License.
 package mesos
 
 import (
+	"fmt"
 	"os"
+	"os/exec"
 	"testing"
+	"time"
 
+	"github.com/intelsdi-x/snap-plugin-utilities/config"
 	"github.com/intelsdi-x/snap/control/plugin"
 	"github.com/intelsdi-x/snap/core"
 	"github.com/intelsdi-x/snap/core/cdata"
@@ -29,8 +33,34 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+func TestMesos_GetMetricTypes(t *testing.T) {
+	cfg := setupCfg()
+	mc := NewMesosCollector()
+	mts, err := mc.GetMetricTypes(cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	Convey("Should return metric types for the '/metrics/snapshot' endpoint", t, func() {
+		So(err, ShouldBeNil)
+		So(len(mts), ShouldBeGreaterThan, 1)
+	})
+
+	Convey("Should return metric types for the '/monitor/statistics' endpoint", t, func() {
+		So(err, ShouldBeNil)
+		So(len(mts), ShouldBeGreaterThan, 1)
+	})
+}
+
 func TestMesos_CollectMetrics(t *testing.T) {
 	cfg := setupCfg()
+	master, err := config.GetConfigItem(cfg, "master")
+	if err != nil {
+		panic(err)
+	}
+
+	go launchTask(master.(string))
+	time.Sleep(time.Duration(10)) // TODO(roger): do a status check instead of sleeping for an arbitrary duration
 
 	Convey("Collect metrics from a Mesos master and agent", t, func() {
 		mc := NewMesosCollector()
@@ -70,12 +100,16 @@ func TestMesos_CollectMetrics(t *testing.T) {
 					Namespace_: core.NewNamespace("intel", "mesos", "agent", "system", "load_5min"),
 					Config_:    cfg.ConfigDataNode,
 				},
+				plugin.MetricType{
+					Namespace_: core.NewNamespace("intel", "mesos", "agent", "*", "*", "mem_total_bytes"),
+					Config_:    cfg.ConfigDataNode,
+				},
 			}
 
 			metrics, err := mc.CollectMetrics(mts)
 			So(err, ShouldBeNil)
 			So(metrics, ShouldNotBeNil)
-			So(len(metrics), ShouldEqual, 2)
+			So(len(metrics), ShouldEqual, 3)
 		})
 
 		Convey("Should return an error if an invalid metric was requested", func() {
@@ -112,4 +146,19 @@ func setupCfg() plugin.ConfigType {
 
 	return plugin.ConfigType{ConfigDataNode: node}
 
+}
+
+// Launch a Mesos task
+func launchTask(master string) {
+	cmd := "mesos"
+	id := time.Now().Unix()
+	args := []string{
+		"execute", fmt.Sprintf("--master=%s", master),
+		fmt.Sprintf("--name=%v", id),
+		"--command=sleep 60",
+	}
+
+	if err := exec.Command(cmd, args...).Run(); err != nil {
+		panic(err)
+	}
 }
