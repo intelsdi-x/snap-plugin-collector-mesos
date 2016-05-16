@@ -111,22 +111,15 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 		return nil, err
 	}
 
-	requestedMaster := []string{}
-	requestedAgent := []string{}
+	requestedMaster := []core.Namespace{}
+	requestedAgent := []core.Namespace{}
 
 	for _, metricType := range mts {
-		// Mesos metrics are (mostly) returned in a flat JSON object and are '/' delimited, e.g.
-		// "slave/cpus_percent". Where they aren't (e.g. perf metrics), we've normalized them into a "/"
-		// string. Therefore, we need to return everything after the snap MetricType namespace (e.g.
-		// "/intel/mesos/master") as a single string.
-		svc := metricType.Namespace().Strings()[2]
-		namespace := strings.Join(metricType.Namespace().Strings()[3:], "/")
-
-		switch {
-		case svc == "master":
-			requestedMaster = append(requestedMaster, namespace)
-		case svc == "agent":
-			requestedAgent = append(requestedAgent, namespace)
+		switch metricType.Namespace().Strings()[2] {
+		case "master":
+			requestedMaster = append(requestedMaster, metricType.Namespace())
+		case "agent":
+			requestedAgent = append(requestedAgent, metricType.Namespace())
 		}
 	}
 
@@ -145,17 +138,18 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 
 		tags := map[string]string{"source": configItems["master"]}
 
-		for _, key := range requestedMaster {
-			val, ok := snapshot[key]
+		for _, requested := range requestedMaster {
+			n := requested.Strings()[3:]
+			val, ok := snapshot[strings.Join(n, "/")]
 			if !ok {
-				return nil, fmt.Errorf("error: requested metric %s not found", val)
+				return nil, fmt.Errorf("error: requested metric %s not found", requested.String())
 			}
 
-			namespace := core.NewNamespace(pluginVendor, pluginName, "master", key)
+			namespace := core.NewNamespace(pluginVendor, pluginName, "master")
+			namespace = namespace.AddStaticElements(n...)
 			//TODO(kromar): is it possible to provide unit NewMetricType(ns, time, tags, unit, value)?
 			// I'm leaving empty string for now...
-			metric := *plugin.NewMetricType(namespace, now, tags, "", val)
-			metrics = append(metrics, metric)
+			metrics = append(metrics, *plugin.NewMetricType(namespace, now, tags, "", val))
 		}
 	}
 
@@ -172,18 +166,16 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 
 		tags := map[string]string{"source": configItems["agent"]}
 
-		for _, key := range requestedAgent {
-			var val interface{}
-			var ok bool = false
+		for _, requested := range requestedAgent {
+			n := requested.Strings()[5:]
 
-			if strings.Split(key, "/")[0] == "*" {
+			// TODO(roger): requested.IsDynamic() doesn't appear to work here
+			if requested.Strings()[3] == "*" {
 				// Iterate through the array of executors returned by GetMonitoringStatistics()
 				for _, exec := range executors {
-					sep := "/"
-					m := strings.Split(key, sep)[2:]
-					val = ns.GetValueByNamespace(exec.Statistics, m)
+					val := ns.GetValueByNamespace(exec.Statistics, n)
 					if val == nil {
-						return nil, fmt.Errorf("error: requested metric %v not found", key)
+						return nil, fmt.Errorf("error: requested metric %v not found", requested.String())
 					}
 
 					// TODO(roger): we can lookup the ID returned by exec.Framework and return a
@@ -191,24 +183,24 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 					// make sense of '1101bcf1-4b17-419d-8bbb-6d5b2c9e5eb3-0000', we could instead
 					// return 'marathon' or 'chronos'.
 					namespace := core.NewNamespace(
-						pluginVendor, pluginName, "agent", exec.Framework, exec.ID,
-						strings.Join(m, sep))
+						pluginVendor, pluginName, "agent", exec.Framework, exec.ID)
+					namespace = namespace.AddStaticElements(n...)
 					// TODO(roger): units
-					metric := *plugin.NewMetricType(namespace, now, tags, "", val)
-					metrics = append(metrics, metric)
+					metrics = append(metrics, *plugin.NewMetricType(namespace, now, tags, "", val))
 
 				}
 			} else {
 				// Get requested metrics from the snapshot map
-				val, ok = snapshot[key]
+				n := requested.Strings()[3:]
+				val, ok := snapshot[strings.Join(n, "/")]
 				if !ok {
-					return nil, fmt.Errorf("error: requested metric %v not found", key)
+					return nil, fmt.Errorf("error: requested metric %v not found", requested.String())
 				}
 
-				namespace := core.NewNamespace(pluginVendor, pluginName, "agent", key)
+				namespace := core.NewNamespace(pluginVendor, pluginName, "agent")
+				namespace = namespace.AddStaticElements(n...)
 				//TODO(kromar): units here also?
-				metric := *plugin.NewMetricType(namespace, now, tags, "", val)
-				metrics = append(metrics, metric)
+				metrics = append(metrics, *plugin.NewMetricType(namespace, now, tags, "", val))
 			}
 		}
 	}
