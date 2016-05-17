@@ -10,8 +10,19 @@ env:
   global:
     - SNAP_PLUGIN_SOURCE=/home/travis/gopath/src/github.com/intelsdi-x/snap-plugin-collector-mesos
   matrix:
+    # Unit test matrix
     - TEST=unit
+
+    # Integration test matrix
+    #
+    # Mesos releases occur every two months, and each minor release is supported for six months.
+    # For more info, see: http://mesos.apache.org/documentation/latest/versioning/
+    #
+    # Fortunately, Mesosphere doesn't remove previous releases from its Apt repositories.
+    # Determine the version string to use here by running `apt-get update && apt-cache policy mesos`
     - TEST=integration MESOS_RELEASE=0.28.1-2.0.20.ubuntu1404
+    - TEST=integration MESOS_RELEASE=0.27.2-2.0.15.ubuntu1404
+    - TEST=integration MESOS_RELEASE=0.26.1-2.0.19.ubuntu1404
 
 before_install:
   - go get github.com/tools/godep

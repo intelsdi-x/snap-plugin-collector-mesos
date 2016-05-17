@@ -77,7 +77,7 @@ func GetMonitoringStatisticsMetricTypes() ([]string, error) {
 
 	namespaces := []string{}
 	err := ns.FromCompositeObject(
-		&mesos_pb2.ResourceStatistics{}, "statistics", &namespaces, ns.InspectEmptyContainers(ns.AlwaysFalse))
+		&mesos_pb2.ResourceStatistics{}, "", &namespaces, ns.InspectEmptyContainers(ns.AlwaysFalse))
 
 	if err != nil {
 		return nil, err
