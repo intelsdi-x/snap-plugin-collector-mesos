@@ -127,29 +127,34 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 	now := time.Now()
 	metrics := []plugin.MetricType{}
 
-	// TODO(roger): only return a master's metrics if master.IsLeader() returns true.
-	// If master.IsLeader() is false, this should wait and periodically poll the master
-	// to determine if leadership has changed and metrics should now be collected.
 	if configItems["master"] != "" && len(requestedMaster) > 0 {
-		snapshot, err := master.GetMetricsSnapshot(configItems["master"])
+		isLeader, err := master.IsLeader(configItems["master"])
 		if err != nil {
 			return nil, err
 		}
-
-		tags := map[string]string{"source": configItems["master"]}
-
-		for _, requested := range requestedMaster {
-			n := requested.Strings()[3:]
-			val, ok := snapshot[strings.Join(n, "/")]
-			if !ok {
-				return nil, fmt.Errorf("error: requested metric %s not found", requested.String())
+		if isLeader {
+			snapshot, err := master.GetMetricsSnapshot(configItems["master"])
+			if err != nil {
+				return nil, err
 			}
 
-			namespace := core.NewNamespace(pluginVendor, pluginName, "master")
-			namespace = namespace.AddStaticElements(n...)
-			//TODO(kromar): is it possible to provide unit NewMetricType(ns, time, tags, unit, value)?
-			// I'm leaving empty string for now...
-			metrics = append(metrics, *plugin.NewMetricType(namespace, now, tags, "", val))
+			tags := map[string]string{"source": configItems["master"]}
+
+			for _, requested := range requestedMaster {
+				n := requested.Strings()[3:]
+				val, ok := snapshot[strings.Join(n, "/")]
+				if !ok {
+					return nil, fmt.Errorf("error: requested metric %s not found", requested.String())
+				}
+
+				namespace := core.NewNamespace(pluginVendor, pluginName, "master")
+				namespace = namespace.AddStaticElements(n...)
+				//TODO(kromar): is it possible to provide unit NewMetricType(ns, time, tags, unit, value)?
+				// I'm leaving empty string for now...
+				metrics = append(metrics, *plugin.NewMetricType(namespace, now, tags, "", val))
+			}
+		} else {
+			log.Info("Attempted CollectMetrics() on ", configItems["master"], "but it isn't the leader.")
 		}
 	}
 

@@ -35,7 +35,8 @@ and the userland tools that enable you to run the `perf` command. On Ubuntu, thi
   * `linux-tools-generic`
   * `linux-tools-$(uname -r)`
 
-*Note: see the [Caveats](#caveats) section below for known issues with Mesos and the `cgroups/perf_event` isolator.*
+*Note: see the [Caveats](#known-issues-and-caveats) section below for known issues with Mesos and the
+`cgroups/perf_event` isolator.*
 
 ### Installation
 Mesos installation is outside the scope of this README. There are a few resources you might want to consider taking
