@@ -1,6 +1,7 @@
 # Snap Collector Plugin - Apache Mesos
 
   1. [Contributing Code](#contributing-code)
+    * [Vagrant development environment](#vagrant-development-environment)
   2. [Contributing Examples](#contributing-examples)
   3. [Contributing Elsewhere](#contributing-elsewhere)
   4. [Thank You](#thank-you)
@@ -25,16 +26,16 @@ Once you're ready to contribute code back to this repo, start with these steps:
   * Fork the appropriate sub-projects that are affected by your change
   * Clone the fork to `$GOPATH/src/github.com/intelsdi-x/`
 
-	```
-	$ git clone https://github.com/<yourGithubID>/<project>.git
-	```
+    ```
+    $ git clone https://github.com/<yourGithubID>/<project>.git
+    ```
 
   * Create a topic branch for your change and checkout that branch
 
     ```
     $ git checkout -b some-topic-branch
     ```
-    
+
   * Make your changes and run the test suite if one is provided (see below)
   * Commit your changes and push them to your fork
   * Open a pull request for the appropriate project
