@@ -23,7 +23,48 @@ import (
 	"time"
 
 	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/client"
+	"github.com/intelsdi-x/snap-plugin-utilities/ns"
 )
+
+type Frameworks struct {
+	ActiveFrameworks []*Framework `json:"frameworks"`
+}
+
+type Framework struct {
+	ID               string     `json:"id"`
+	OfferedResources *Resources `json:"offered_resources"`
+	Resources        *Resources `json:"resources"`
+	UsedResources    *Resources `json:"used_resources"`
+}
+
+type Resources struct {
+	CPUs float64 `json:"cpus"`
+	Disk float64 `json:"disk"`
+	Mem  float64 `json:"mem"`
+}
+
+// Recursively traverse the Frameworks struct, building "/"-delimited strings that resemble snap metric types.
+func GetFrameworksMetricTypes() ([]string, error) {
+	namespaces := []string{}
+	if err := ns.FromCompositeObject(Framework{}, "", &namespaces); err != nil {
+		return nil, err
+	}
+	return namespaces, nil
+
+}
+
+// Get metrics from the '/master/frameworks' endpoint on the master. This endpoint returns JSON about the overall
+// state and resource utilization of the frameworks running on the cluster.
+func GetFrameworks(host string) ([]*Framework, error) {
+	var frameworks Frameworks
+
+	c := client.NewClient(host, "/master/frameworks", time.Duration(10))
+	if err := c.Fetch(&frameworks); err != nil {
+		return nil, err
+	}
+
+	return frameworks.ActiveFrameworks, nil
+}
 
 // Collect metrics from the '/metrics/snapshot' endpoint on the master.  The '/metrics/snapshot' endpoint returns JSON,
 // and all metrics contained in the endpoint use a string as the key, and a double (float64) for the value. For example:

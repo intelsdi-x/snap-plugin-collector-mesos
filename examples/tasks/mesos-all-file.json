@@ -13,6 +13,7 @@
         "/intel/mesos/master/system/load_1min": {},
         "/intel/mesos/master/system/load_5min": {},
         "/intel/mesos/master/system/load_15min": {},
+        "/intel/mesos/master/*/resources/cpus": {},
         "/intel/mesos/agent/slave/cpus_percent": {},
         "/intel/mesos/agent/slave/mem_percent": {},
         "/intel/mesos/agent/slave/disk_percent": {},

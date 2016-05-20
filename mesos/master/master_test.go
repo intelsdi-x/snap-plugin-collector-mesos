@@ -28,6 +28,91 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+func TestGetFrameworks(t *testing.T) {
+	testData := Frameworks{ActiveFrameworks: []*Framework{
+		&Framework{
+			ID: "id1",
+			OfferedResources: &Resources{
+				CPUs: 1.0,
+				Mem:  1024.0,
+				Disk: 512.0,
+			},
+			Resources: &Resources{
+				CPUs: 1.0,
+				Mem:  1024.0,
+				Disk: 512.0,
+			},
+			UsedResources: &Resources{
+				CPUs: 1.0,
+				Mem:  1024.0,
+				Disk: 512.0,
+			},
+		},
+	},
+	}
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		td, err := json.Marshal(testData)
+		if err != nil {
+			panic(err)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(200)
+		w.Write(td)
+	}))
+	defer ts.Close()
+
+	host, err := extractHostFromURL(ts.URL)
+	if err != nil {
+		panic(err)
+	}
+
+	Convey("When framework resource utilization is requested", t, func() {
+		frameworks, err := GetFrameworks(host)
+
+		Convey("Then no error should be reported", func() {
+			So(err, ShouldBeNil)
+		})
+
+		Convey("Then list of frameworks is returned", func() {
+			So(frameworks, ShouldNotBeNil)
+			So(len(frameworks), ShouldEqual, len(testData.ActiveFrameworks))
+		})
+
+		Convey("Then proper stats are returned", func() {
+			for _, framework := range frameworks {
+				switch framework.ID {
+				case "id1":
+					So(framework.Resources.CPUs, ShouldEqual, 1.0)
+					So(framework.Resources.Disk, ShouldEqual, 512.0)
+					So(framework.Resources.Mem, ShouldEqual, 1024.0)
+					So(framework.OfferedResources.CPUs, ShouldEqual, 1.0)
+					So(framework.OfferedResources.Disk, ShouldEqual, 512.0)
+					So(framework.OfferedResources.Mem, ShouldEqual, 1024.0)
+					So(framework.UsedResources.CPUs, ShouldEqual, 1.0)
+					So(framework.UsedResources.Disk, ShouldEqual, 512.0)
+					So(framework.UsedResources.Mem, ShouldEqual, 1024.0)
+
+				}
+			}
+		})
+	})
+}
+
+func TestGetFrameworksMetricTypes(t *testing.T) {
+	Convey("When building metric types for Frameworks on the master", t, func() {
+		namespaces, err := GetFrameworksMetricTypes()
+		Convey("No errors should be reported", func() {
+			So(err, ShouldBeNil)
+		})
+		Convey("Valid namespace parts should be returned as a slice of strings", func() {
+			So(len(namespaces), ShouldBeGreaterThan, 0)
+			So(valueExistsInSlice("resources/disk", namespaces), ShouldBeTrue)
+			So(valueExistsInSlice("resources/foo", namespaces), ShouldBeFalse)
+		})
+	})
+}
+
 func TestGetMetricsSnapshot(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		td, err := json.Marshal(map[string]float64{
@@ -115,4 +200,13 @@ func extractHostFromURL(u string) (string, error) {
 		return "", err
 	}
 	return parsed.Host, nil
+}
+
+func valueExistsInSlice(search string, slice []string) bool {
+	for _, elem := range slice {
+		if elem == search {
+			return true
+		}
+	}
+	return false
 }
