@@ -85,10 +85,19 @@ For a complete reference, please consult the [official Mesos documentation][meso
 #### Mesos monitoring statistics (executor/container metrics)
 This plugin returns most of the available metrics from the `/monitor/statistics` API endpoint on the Mesos agent,
 which includes metrics about running executors (containers) on a specific Mesos agent. The metrics available via this
-endpoint largely depend on the features enabled in Mesos. For example: if Mesos is compiled with the
-`--with-network-isolator` option, you'll be able to view per-container network statistics. Furthermore, if you have
-the necessary packages installed, you can enable the `cgroups/perf_event` isolator to gather per-container perf
-statistics.
+endpoint largely depend on the features enabled in Mesos. There are far too many metrics to list here, so instead we
+provide links to the code that describes the structure.
+
+*Note: the available metrics are defined in the mesos.proto protobuf, which has been compiled to Golang for the purposes
+of this plugin. More information is available in [GitHub issue #11][github-issue-11].*
+
+  * The base [`ResourceStatistics` struct][resourcestatistics-struct] is provided for each running executor on the
+  cluster.
+  * If Mesos was built with the `--with-network-isolator` option and the `network/port_mapping` isolator is enabled,
+  you'll also be able to collect [various network metrics][network-usage-info].
+  * If the necessary perf-related packages are installed, Mesos is configured to use the `cgroups/perf_event`, and
+  values are provided to the `--perf_events` option on the Mesos agent, you'll also be able to collect per-container
+  perf metrics as defined in the [`PerfStatistics` struct][perfstatistics-struct].
 
 ### Examples
 There are examples of the Snap global configuration and various tasks located in the [examples/](examples) directory.
@@ -149,9 +158,9 @@ $ snapctl task stop <task ID>
   older "slave" term. For more information, see [MESOS-1478][mesos-1478-jira].
 
 ### Roadmap
-For version 2, we intend to support additional deployment options as documented in issue #14. Otherwise, there isn't
-a formal roadmap for this plugin, but it's in active development. If you have a feature request, please
-[open a new issue on GitHub][github-new-issue] or [submit a pull request][github-new-pull-request].
+For version 2, we intend to support additional deployment options as documented in [GitHub issue #14][github-issue-14].
+Otherwise, there isn't a formal roadmap for this plugin, but it's in active development. If you have a feature request,
+please [open a new issue on GitHub][github-new-issue] or [submit a pull request][github-new-pull-request].
 
 ## Community Support
 This repository is one of many plugins in Snap, a powerful telemetry framework. To reach out to other users in the
@@ -171,6 +180,8 @@ under the [Apache Software License, version 2.0](LICENSE).
   * Authors: [Marcin Krolik][marcin-github], [Roger Ignazio][roger-github]
 
 
+[github-issue-11]: https://github.com/intelsdi-x/snap-plugin-collector-mesos/issues/11
+[github-issue-14]: https://github.com/intelsdi-x/snap-plugin-collector-mesos/issues/14
 [github-new-issue]: https://github.com/intelsdi-x/snap-plugin-collector-mesos/issues/new
 [github-new-pull-request]: https://github.com/intelsdi-x/snap-plugin-collector-mesos/pulls
 [github-rfc]: https://github.com/intelsdi-x/snap-plugin-collector-mesos/issues?utf8=✓&q=is%3Aissue+is%3Aall+label%3ARFC+
@@ -182,5 +193,8 @@ under the [Apache Software License, version 2.0](LICENSE).
 [mesos-getting-started]: http://mesos.apache.org/gettingstarted/
 [mesos-monitoring]: http://mesos.apache.org/documentation/latest/monitoring/
 [mesosphere-downloads]: https://mesosphere.com/downloads/
+[network-usage-info]: https://github.com/intelsdi-x/snap-plugin-collector-mesos/blob/master/mesos/mesos_pb2/mesos_pb2.go#L3141-L3149
+[perfstatistics-struct]: https://github.com/intelsdi-x/snap-plugin-collector-mesos/blob/master/mesos/mesos_pb2/mesos_pb2.go#L3541-L3610
+[resourcestatistics-struct]: https://github.com/intelsdi-x/snap-plugin-collector-mesos/blob/master/mesos/mesos_pb2/mesos_pb2.go#L3086-L3165
 [roger-github]: https://github.com/rji
 [snap-github]: http://github.com/intelsdi-x/snap
