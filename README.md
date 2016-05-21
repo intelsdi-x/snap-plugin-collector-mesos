@@ -109,12 +109,19 @@ of this plugin. More information is available in [GitHub issue #11][github-issue
   perf metrics as defined in the [`PerfStatistics` struct][perfstatistics-struct].
 
 ### Examples
-There are examples of the Snap global configuration and various tasks located in the [examples/](examples) directory.
-To get started with these examples and collect Mesos metrics and publish them to a file, you'll need to perform the
-following steps.
+There are examples of the Snap global configuration and various tasks located in the [examples](examples) directory.
+Specifically, these include:
 
-*Note: these steps will work with the Vagrant development environment included in this repo. For more info on how
+  * Snap global configuration
+  * Snap tasks (publish to file and publish to InfluxDB)
+  * Grafana dashboard for visualizing cluster telemetry
+
+*Note: these scenarios will work with the Vagrant development environment included in this repo. For more info on how
 to get started with Vagrant, please see [CONTRIBUTING.md](CONTRIBUTING.md).*
+
+#### Publishing metrics to a file
+To start collecting Mesos metrics and publish them to a file, you'll need to perform the following steps.
+
 
 Start the Snap daemon in the background:
 
@@ -153,6 +160,44 @@ Stop the task:
 ```
 $ snapctl task stop <task ID>
 ```
+
+#### Visualizing cluster telemetry with Grafana and InfluxDB
+To help you get up and running quickly, this repo also includes a more extensive example of how to publish Mesos cluster
+metrics to InfluxDB and visualize this data with Grafana. We assume that you already have a working InfluxDB and
+Grafana installation, and that you have all the necessary Snap plugins and configuration loaded.
+
+*Note: you'll need to modify the values for the `host`, `user`, and `password` options in the example tasks.*
+
+On the Mesos master(s), run the following command:
+
+```
+$ snapctl task create -t examples/tasks/mesos-master-influxdb.json
+```
+
+On the Mesos agent(s), run the following command:
+
+```
+$ snapctl task create -t examples/tasks/mesos-agent-influxdb.json
+```
+
+Finally, load the example Grafana dashboard. The following commands assume that Grafana is running at
+http://grafana.example.com:3000 and using the default username of `admin`, and the default password of `admin`.
+
+```
+$ GRAFANA="http://grafana.example.com:3000"
+$ COOKIEJAR=$(mktemp)
+
+$ curl -sH 'Content-Type: application/json; charset=UTF-8'              \
+    --data-binary '{"user": "admin", "email": "", "password": "admin"}' \
+    --cookie-jar "$COOKIEJAR" "${GRAFANA}/login"
+
+$ curl -sH 'Content-Type: application/json; charset=UTF-8' --cookie "$COOKIEJAR" \
+    -d@mesos.json "${GRAFANA}/api/dashboards/db"
+```
+
+You should now see some basic metrics about your Mesos cluster:
+
+![grafana-dashboard](assets/grafana-dashboard.png)
 
 ### Known Issues and Caveats
   * Snap's metric catalog is populated only once, when the Mesos collector plugin is loaded. A configuration change on

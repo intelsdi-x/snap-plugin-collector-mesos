@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "schedule": {
+    "type": "simple",
+    "interval": "10s"
+  },
+  "workflow": {
+    "collect": {
+      "metrics": {
+        "/intel/mesos/master/*/offered_resources/cpus": {},
+        "/intel/mesos/master/*/offered_resources/disk": {},
+        "/intel/mesos/master/*/offered_resources/mem": {},
+        "/intel/mesos/master/*/resources/cpus": {},
+        "/intel/mesos/master/*/resources/disk": {},
+        "/intel/mesos/master/*/resources/mem": {},
+        "/intel/mesos/master/*/used_resources/cpus": {},
+        "/intel/mesos/master/*/used_resources/disk": {},
+        "/intel/mesos/master/*/used_resources/mem": {},
+        "/intel/mesos/master/master/cpus_total": {},
+        "/intel/mesos/master/master/cpus_used": {},
+        "/intel/mesos/master/master/disk_total": {},
+        "/intel/mesos/master/master/disk_used": {},
+        "/intel/mesos/master/master/frameworks_connected": {},
+        "/intel/mesos/master/master/mem_total": {},
+        "/intel/mesos/master/master/mem_used": {},
+        "/intel/mesos/master/master/slaves_connected": {},
+        "/intel/mesos/master/master/tasks_error": {},
+        "/intel/mesos/master/master/tasks_failed": {},
+        "/intel/mesos/master/master/tasks_finished": {},
+        "/intel/mesos/master/master/tasks_killed": {},
+        "/intel/mesos/master/master/tasks_killing": {},
+        "/intel/mesos/master/master/tasks_lost": {},
+        "/intel/mesos/master/master/tasks_running": {},
+        "/intel/mesos/master/master/tasks_staging": {},
+        "/intel/mesos/master/master/tasks_starting": {},
+        "/intel/mesos/master/registrar/queued_operations": {},
+        "/intel/mesos/master/registrar/registry_size_bytes": {},
+        "/intel/mesos/master/registrar/state_fetch_ms": {},
+        "/intel/mesos/master/registrar/state_store_ms": {},
+        "/intel/mesos/master/system/load_15min": {},
+        "/intel/mesos/master/system/load_1min": {},
+        "/intel/mesos/master/system/load_5min": {},
+        "/intel/mesos/master/system/mem_free_bytes": {},
+        "/intel/mesos/master/system/mem_total_bytes": {}
+      },
+      "config": {},
+      "process": null,
+      "publish": [
+        {
+          "plugin_name": "influx",
+          "config": {
+            "host": "10.134.26.19",
+            "port": 8086,
+            "database": "snap",
+            "user": "admin",
+            "password": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
