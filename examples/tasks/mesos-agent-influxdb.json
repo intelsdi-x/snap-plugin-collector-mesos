@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "schedule": {
+    "type": "simple",
+    "interval": "10s"
+  },
+  "workflow": {
+    "collect": {
+      "metrics": {
+        "/intel/mesos/agent/*/*/cpus_system_time_secs": {},
+        "/intel/mesos/agent/*/*/cpus_user_time_secs": {},
+        "/intel/mesos/agent/*/*/disk_limit_bytes": {},
+        "/intel/mesos/agent/*/*/disk_used_bytes": {},
+        "/intel/mesos/agent/*/*/mem_limit_bytes": {},
+        "/intel/mesos/agent/*/*/mem_total_bytes": {},
+        "/intel/mesos/agent/*/*/net_rx_bytes": {},
+        "/intel/mesos/agent/*/*/net_rx_dropped": {},
+        "/intel/mesos/agent/*/*/net_rx_errors": {},
+        "/intel/mesos/agent/*/*/net_rx_packets": {},
+        "/intel/mesos/agent/*/*/net_tx_bytes": {},
+        "/intel/mesos/agent/*/*/net_tx_dropped": {},
+        "/intel/mesos/agent/*/*/net_tx_errors": {},
+        "/intel/mesos/agent/*/*/net_tx_packets": {},
+        "/intel/mesos/agent/slave/cpus_total": {},
+        "/intel/mesos/agent/slave/cpus_used": {},
+        "/intel/mesos/agent/slave/disk_total": {},
+        "/intel/mesos/agent/slave/disk_used": {},
+        "/intel/mesos/agent/slave/executors_registering": {},
+        "/intel/mesos/agent/slave/executors_running": {},
+        "/intel/mesos/agent/slave/executors_terminated": {},
+        "/intel/mesos/agent/slave/executors_terminating": {},
+        "/intel/mesos/agent/slave/frameworks_active": {},
+        "/intel/mesos/agent/slave/mem_total": {},
+        "/intel/mesos/agent/slave/mem_used": {},
+        "/intel/mesos/agent/slave/tasks_failed": {},
+        "/intel/mesos/agent/slave/tasks_finished": {},
+        "/intel/mesos/agent/slave/tasks_killed": {},
+        "/intel/mesos/agent/slave/tasks_killing": {},
+        "/intel/mesos/agent/slave/tasks_lost": {},
+        "/intel/mesos/agent/slave/tasks_running": {},
+        "/intel/mesos/agent/slave/tasks_staging": {},
+        "/intel/mesos/agent/slave/tasks_starting": {},
+        "/intel/mesos/agent/system/cpus_total": {},
+        "/intel/mesos/agent/system/load_15min": {},
+        "/intel/mesos/agent/system/load_1min": {},
+        "/intel/mesos/agent/system/load_5min": {},
+        "/intel/mesos/agent/system/mem_free_bytes": {},
+        "/intel/mesos/agent/system/mem_total_bytes": {}
+
+      },
+      "config": {},
+      "process": null,
+      "publish": [
+        {
+          "plugin_name": "influx",
+          "config": {
+            "host": "10.134.26.19",
+            "port": 8086,
+            "database": "snap",
+            "user": "admin",
+            "password": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

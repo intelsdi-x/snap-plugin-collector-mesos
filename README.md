@@ -39,16 +39,71 @@ and the userland tools that enable you to run the `perf` command. On Ubuntu, thi
 `cgroups/perf_event` isolator.*
 
 ### Installation
-Mesos installation is outside the scope of this README. There are a few resources you might want to consider taking
-a look at to get started with Mesos:
+#### Download the Mesos plugin binary
+This plugin isn't currently available for download as a pre-built binary, although we hope to offer this in the future.
+For now, please proceed with [building the plugin from source](#building-the-plugin-from-source).
+
+#### Building the plugin from source
+Clone this GitHub repository:
+
+```
+$ git clone https://github.com/intelsdi-x/snap-plugin-collector-mesos
+$ cd snap-plugin-collector-mesos
+```
+
+Build the plugin by running `make`:
+
+```
+$ make
+```
+
+After compilation has finished, the binary will be available in `build/rootfs/snap-plugin-collector-mesos`
+
+### Configuration and Usage
+First, be sure that you've familiarized yourself with the Snap framework by reading the
+[Getting Started documentation][snap-getting-started].
+
+To specify the hostname or IP address and port that this plugin should connect to, add the following to the Snap
+global configuration, in the `collector` object:
+
+```
+    "mesos": {
+      "all": {
+        "master": "10.180.10.180:5050",
+        "agent": "10.180.10.180:5051"
+      }
+    }
+```
+
+Typically, you should only need to provide a value for `master` _or_ `agent`, unless you're running the master and agent
+on the same machine (e.g. in development). This plugin will automatically determine which service(s) you provided a
+host/port combination for and collect metrics from the master and/or the agent.
+
+Snap and this plugin should then be deployed to each machine in the Mesos cluster. This allows collection to happen as
+close to the agent as possible.
+
+![deploy-distributed](assets/deploy-distributed.png)
+
+When monitoring the Mesos masters, the plugin queries the local Mesos master to determine if it's currently the leader.
+If it is, metrics collection will occur normally. If the local master is not currently the leader, a message will be
+recorded to the plugin log, and metrics collection will not happen on that machine.
+
+Once Snap is configured and this plugin is loaded, you'll be able to start collecting metrics from the Mesos cluster.
+For examples on how to do this, see the [Examples](#examples) section below.
+
+## Documentation
+Mesos is a complex system and its installation and administration is outside the scope of this README. There are a few
+resources you might want to consider taking a look at to get started with Mesos:
   * [Apache Mesos "Getting Started" documentation][mesos-getting-started]
   * [Mesosphere Downloads][mesosphere-downloads]
   * [scripts/provision-travis.sh](scripts/provision-travis.sh)
 
-### Configuration and Usage
-
-## Documentation
 Design documents and RFCs pertaining to this plugin are tracked via the ["RFC" label in GitHub Issues][github-rfc].
+
+Also, you may want to consider checking out the following tests to understand how this plugin works:
+  * [Master unit tests](mesos/master/master_test.go)
+  * [Agent unit tests](mesos/agent/agent_test.go)
+  * [Plugin integration tests](mesos/mesos_integration_test.go)
 
 ### Collected Metrics
 This plugin collects hundreds of metrics from Mesos masters and agents. As such, there are too many to list them all
@@ -109,12 +164,19 @@ of this plugin. More information is available in [GitHub issue #11][github-issue
   perf metrics as defined in the [`PerfStatistics` struct][perfstatistics-struct].
 
 ### Examples
-There are examples of the Snap global configuration and various tasks located in the [examples/](examples) directory.
-To get started with these examples and collect Mesos metrics and publish them to a file, you'll need to perform the
-following steps.
+There are examples of the Snap global configuration and various tasks located in the [examples](examples) directory.
+Specifically, these include:
 
-*Note: these steps will work with the Vagrant development environment included in this repo. For more info on how
+  * Snap global configuration
+  * Snap tasks (publish to file and publish to InfluxDB)
+  * Grafana dashboard for visualizing cluster telemetry
+
+*Note: these scenarios will work with the Vagrant development environment included in this repo. For more info on how
 to get started with Vagrant, please see [CONTRIBUTING.md](CONTRIBUTING.md).*
+
+#### Publishing metrics to a file
+To start collecting Mesos metrics and publish them to a file, you'll need to perform the following steps.
+
 
 Start the Snap daemon in the background:
 
@@ -153,6 +215,44 @@ Stop the task:
 ```
 $ snapctl task stop <task ID>
 ```
+
+#### Visualizing cluster telemetry with Grafana and InfluxDB
+To help you get up and running quickly, this repo also includes a more extensive example of how to publish Mesos cluster
+metrics to InfluxDB and visualize this data with Grafana. We assume that you already have a working InfluxDB and
+Grafana installation, and that you have all the necessary Snap plugins and configuration loaded.
+
+*Note: you'll need to modify the values for the `host`, `user`, and `password` options in the example tasks.*
+
+On the Mesos master(s), run the following command:
+
+```
+$ snapctl task create -t examples/tasks/mesos-master-influxdb.json
+```
+
+On the Mesos agent(s), run the following command:
+
+```
+$ snapctl task create -t examples/tasks/mesos-agent-influxdb.json
+```
+
+Finally, load the example Grafana dashboard. The following commands assume that Grafana is running at
+http://grafana.example.com:3000 and using the default username of `admin`, and the default password of `admin`.
+
+```
+$ GRAFANA="http://grafana.example.com:3000"
+$ COOKIEJAR=$(mktemp)
+
+$ curl -sH 'Content-Type: application/json; charset=UTF-8'              \
+    --data-binary '{"user": "admin", "email": "", "password": "admin"}' \
+    --cookie-jar "$COOKIEJAR" "${GRAFANA}/login"
+
+$ curl -sH 'Content-Type: application/json; charset=UTF-8' --cookie "$COOKIEJAR" \
+    -d@mesos.json "${GRAFANA}/api/dashboards/db"
+```
+
+You should now see some basic metrics about your Mesos cluster:
+
+![grafana-dashboard](assets/grafana-dashboard.png)
 
 ### Known Issues and Caveats
   * Snap's metric catalog is populated only once, when the Mesos collector plugin is loaded. A configuration change on
@@ -206,4 +306,5 @@ under the [Apache Software License, version 2.0](LICENSE).
 [perfstatistics-struct]: https://github.com/intelsdi-x/snap-plugin-collector-mesos/blob/master/mesos/mesos_pb2/mesos_pb2.go#L3541-L3610
 [resourcestatistics-struct]: https://github.com/intelsdi-x/snap-plugin-collector-mesos/blob/master/mesos/mesos_pb2/mesos_pb2.go#L3086-L3165
 [roger-github]: https://github.com/rji
+[snap-getting-started]: https://github.com/intelsdi-x/snap/blob/master/README.md#getting-started
 [snap-github]: http://github.com/intelsdi-x/snap
