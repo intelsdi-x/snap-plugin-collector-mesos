@@ -39,16 +39,71 @@ and the userland tools that enable you to run the `perf` command. On Ubuntu, thi
 `cgroups/perf_event` isolator.*
 
 ### Installation
-Mesos installation is outside the scope of this README. There are a few resources you might want to consider taking
-a look at to get started with Mesos:
+#### Download the Mesos plugin binary
+This plugin isn't currently available for download as a pre-built binary, although we hope to offer this in the future.
+For now, please proceed with [building the plugin from source](#building-the-plugin-from-source).
+
+#### Building the plugin from source
+Clone this GitHub repository:
+
+```
+$ git clone https://github.com/intelsdi-x/snap-plugin-collector-mesos
+$ cd snap-plugin-collector-mesos
+```
+
+Build the plugin by running `make`:
+
+```
+$ make
+```
+
+After compilation has finished, the binary will be available in `build/rootfs/snap-plugin-collector-mesos`
+
+### Configuration and Usage
+First, be sure that you've familiarized yourself with the Snap framework by reading the
+[Getting Started documentation][snap-getting-started].
+
+To specify the hostname or IP address and port that this plugin should connect to, add the following to the Snap
+global configuration, in the `collector` object:
+
+```
+    "mesos": {
+      "all": {
+        "master": "10.180.10.180:5050",
+        "agent": "10.180.10.180:5051"
+      }
+    }
+```
+
+Typically, you should only need to provide a value for `master` _or_ `agent`, unless you're running the master and agent
+on the same machine (e.g. in development). This plugin will automatically determine which service(s) you provided a
+host/port combination for and collect metrics from the master and/or the agent.
+
+Snap and this plugin should then be deployed to each machine in the Mesos cluster. This allows collection to happen as
+close to the agent as possible.
+
+![deploy-distributed](assets/deploy-distributed.png)
+
+When monitoring the Mesos masters, the plugin queries the local Mesos master to determine if it's currently the leader.
+If it is, metrics collection will occur normally. If the local master is not currently the leader, a message will be
+recorded to the plugin log, and metrics collection will not happen on that machine.
+
+Once Snap is configured and this plugin is loaded, you'll be able to start collecting metrics from the Mesos cluster.
+For examples on how to do this, see the [Examples](#examples) section below.
+
+## Documentation
+Mesos is a complex system and its installation and administration is outside the scope of this README. There are a few
+resources you might want to consider taking a look at to get started with Mesos:
   * [Apache Mesos "Getting Started" documentation][mesos-getting-started]
   * [Mesosphere Downloads][mesosphere-downloads]
   * [scripts/provision-travis.sh](scripts/provision-travis.sh)
 
-### Configuration and Usage
-
-## Documentation
 Design documents and RFCs pertaining to this plugin are tracked via the ["RFC" label in GitHub Issues][github-rfc].
+
+Also, you may want to consider checking out the following tests to understand how this plugin works:
+  * [Master unit tests](mesos/master/master_test.go)
+  * [Agent unit tests](mesos/agent/agent_test.go)
+  * [Plugin integration tests](mesos/mesos_integration_test.go)
 
 ### Collected Metrics
 This plugin collects hundreds of metrics from Mesos masters and agents. As such, there are too many to list them all
@@ -251,4 +306,5 @@ under the [Apache Software License, version 2.0](LICENSE).
 [perfstatistics-struct]: https://github.com/intelsdi-x/snap-plugin-collector-mesos/blob/master/mesos/mesos_pb2/mesos_pb2.go#L3541-L3610
 [resourcestatistics-struct]: https://github.com/intelsdi-x/snap-plugin-collector-mesos/blob/master/mesos/mesos_pb2/mesos_pb2.go#L3086-L3165
 [roger-github]: https://github.com/rji
+[snap-getting-started]: https://github.com/intelsdi-x/snap/blob/master/README.md#getting-started
 [snap-github]: http://github.com/intelsdi-x/snap
