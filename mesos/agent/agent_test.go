@@ -30,6 +30,42 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+func TestGetFlags(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		testData := Flags{
+			Flags: map[string]string{
+				"isolation": "cgroups/cpu,cgroups/mem",
+				"port":      "5051",
+			},
+		}
+		td, err := json.Marshal(testData)
+		if err != nil {
+			panic(err)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(200)
+		w.Write(td)
+	}))
+	defer ts.Close()
+
+	host, err := extractHostFromURL(ts.URL)
+	if err != nil {
+		panic(err)
+	}
+
+	Convey("When getting flags from the Mesos agent", t, func() {
+		flags, err := GetFlags(host)
+
+		Convey("Should return a map of the configuration flags", func() {
+			So(err, ShouldBeNil)
+			So(flags["isolation"], ShouldEqual, "cgroups/cpu,cgroups/mem")
+			So(flags["port"], ShouldEqual, "5051")
+			So(flags["perf_events"], ShouldEqual, "")
+		})
+	})
+}
+
 func TestGetMetricsSnapshot(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		td, err := json.Marshal(map[string]float64{

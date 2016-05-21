@@ -35,6 +35,23 @@ type Executor struct {
 	Statistics *mesos_pb2.ResourceStatistics `json:"statistics"`
 }
 
+// The "/slave(1)/flags" endpoint on a Mesos agent returns an object that contains a single object "flags".
+type Flags struct {
+	Flags map[string]string
+}
+
+// Get the configuration flags from the Mesos agent and return them as a map.
+func GetFlags(host string) (map[string]string, error) {
+	flags := &Flags{}
+
+	c := client.NewClient(host, "/slave(1)/flags", time.Duration(5))
+	if err := c.Fetch(&flags); err != nil {
+		return nil, err
+	}
+
+	return flags.Flags, nil
+}
+
 // Collect metrics from the '/metrics/snapshot' endpoint on the agent.  The '/metrics/snapshot' endpoint returns JSON,
 // and all metrics contained in the endpoint use a string as the key, and a double (float64) for the value. For example:
 //
