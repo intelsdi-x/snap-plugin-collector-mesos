@@ -26,7 +26,6 @@ env:
 
 before_install:
   - go get github.com/tools/godep
-  - go get github.com/intelsdi-x/snap
   - if [ ! -d $SNAP_PLUGIN_SOURCE ]; then mkdir -p $HOME/gopath/src/github.com/intelsdi-x; ln -s $TRAVIS_BUILD_DIR $SNAP_PLUGIN_SOURCE; fi # CI for forks not from intelsdi-x
 
 install:

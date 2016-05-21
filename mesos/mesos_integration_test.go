@@ -80,12 +80,16 @@ func TestMesos_CollectMetrics(t *testing.T) {
 					Namespace_: core.NewNamespace("intel", "mesos", "master", "system", "load_5min"),
 					Config_:    cfg.ConfigDataNode,
 				},
+				plugin.MetricType{
+					Namespace_: core.NewNamespace("intel", "mesos", "master", "*", "used_resources", "cpus"),
+					Config_:    cfg.ConfigDataNode,
+				},
 			}
 
 			metrics, err := mc.CollectMetrics(mts)
 			So(err, ShouldBeNil)
 			So(metrics, ShouldNotBeNil)
-			So(len(metrics), ShouldEqual, 3)
+			So(len(metrics), ShouldEqual, 4)
 		})
 
 		// NOTE: in future versions of Mesos, the term "slave" will change to "agent". This has the potential

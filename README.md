@@ -59,6 +59,15 @@ $ snapctl plugin load snap-plugin-collector-mesos
 $ snapctl metric list
 ```
 
+#### Mesos framework metrics
+At the highest (per-cluster) level, this plugin returns select metrics from the `/master/frameworks` API endpoint on
+the leading Mesos master. Specifically, we collect the following metrics on a per-framework basis:
+
+  * Offered CPUs, memory, and disk
+  * Allocated CPUs, memory, and disk
+  * Used CPUs, memory, and disk
+
+
 #### Mesos master/agent metrics
 This plugin returns all available metrics from the `/metrics/snapshot` API endpoint on Mesos masters and agents.
 A few of the available metrics that are collected include:

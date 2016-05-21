@@ -77,6 +77,18 @@ func (m *Mesos) GetMetricTypes(cfg plugin.ConfigType) ([]plugin.MetricType, erro
 				AddStaticElements(strings.Split(key, "/")...)
 			metricTypes = append(metricTypes, plugin.MetricType{Namespace_: namespace})
 		}
+
+		framework_mts, err := master.GetFrameworksMetricTypes()
+		if err != nil {
+			return nil, err
+		}
+
+		for _, key := range framework_mts {
+			namespace := core.NewNamespace(pluginVendor, pluginName, "master").
+				AddDynamicElement("framework_id", "Framework ID").
+				AddStaticElements(strings.Split(key, "/")...)
+			metricTypes = append(metricTypes, plugin.MetricType{Namespace_: namespace})
+		}
 	}
 
 	if configItems["agent"] != "" {
@@ -138,20 +150,44 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 				return nil, err
 			}
 
+			frameworks, err := master.GetFrameworks(configItems["master"])
+			if err != nil {
+				return nil, err
+			}
+
 			tags := map[string]string{"source": configItems["master"]}
 
 			for _, requested := range requestedMaster {
-				n := requested.Strings()[3:]
-				val, ok := snapshot[strings.Join(n, "/")]
-				if !ok {
-					return nil, fmt.Errorf("error: requested metric %s not found", requested.String())
-				}
+				// TODO(roger): requested.IsDynamic() doesn't appear to work here
+				if requested.Strings()[3] == "*" {
+					n := requested.Strings()[4:]
 
-				namespace := core.NewNamespace(pluginVendor, pluginName, "master")
-				namespace = namespace.AddStaticElements(n...)
-				//TODO(kromar): is it possible to provide unit NewMetricType(ns, time, tags, unit, value)?
-				// I'm leaving empty string for now...
-				metrics = append(metrics, *plugin.NewMetricType(namespace, now, tags, "", val))
+					// Iterate through the array of frameworks returned by GetFrameworks()
+					for _, framework := range frameworks {
+						val := ns.GetValueByNamespace(framework, n)
+						if val == nil {
+							return nil, fmt.Errorf("error: requested metric %v not found", requested.String())
+						}
+
+						namespace := core.NewNamespace(pluginVendor, pluginName, "master", framework.ID)
+						namespace = namespace.AddStaticElements(n...)
+						// TODO(roger): units
+						metrics = append(metrics, *plugin.NewMetricType(namespace, now, tags, "", val))
+
+					}
+				} else {
+					n := requested.Strings()[3:]
+					val, ok := snapshot[strings.Join(n, "/")]
+					if !ok {
+						return nil, fmt.Errorf("error: requested metric %s not found", requested.String())
+					}
+
+					namespace := core.NewNamespace(pluginVendor, pluginName, "master")
+					namespace = namespace.AddStaticElements(n...)
+					//TODO(kromar): is it possible to provide unit NewMetricType(ns, time, tags, unit, value)?
+					// I'm leaving empty string for now...
+					metrics = append(metrics, *plugin.NewMetricType(namespace, now, tags, "", val))
+				}
 			}
 		} else {
 			log.Info("Attempted CollectMetrics() on ", configItems["master"], "but it isn't the leader.")
@@ -183,10 +219,6 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 						return nil, fmt.Errorf("error: requested metric %v not found", requested.String())
 					}
 
-					// TODO(roger): we can lookup the ID returned by exec.Framework and return a
-					// human-readable name if that's desired. So instead of the user needing to
-					// make sense of '1101bcf1-4b17-419d-8bbb-6d5b2c9e5eb3-0000', we could instead
-					// return 'marathon' or 'chronos'.
 					namespace := core.NewNamespace(
 						pluginVendor, pluginName, "agent", exec.Framework, exec.ID)
 					namespace = namespace.AddStaticElements(n...)
