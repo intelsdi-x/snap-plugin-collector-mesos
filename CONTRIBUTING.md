@@ -60,8 +60,10 @@ $ vagrant up
 The provisioning script will install Mesos, ZooKeeper, Go, and Snap. You can then connect to Mesos at the following
 URLs:
 
-  * Master: <http://10.180.10.180:5050>
-  * Agent: <http://10.180.10.180:5051>
+  * Mesos master: <http://10.180.10.180:5050>
+  * Mesos agent: <http://10.180.10.180:5051>
+  * InfluxDB: <http://10.180.10.180:8083>
+  * Grafana: <http://10.180.10.180:3000>
 
 In order to launch a task on the cluster that you can then observe with Snap, try running the following command in a
 separate terminal window / SSH session:

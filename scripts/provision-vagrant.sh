@@ -44,6 +44,26 @@ function install_prereqs {
         linux-tools-common linux-tools-generic linux-tools-$(uname -r)
 }
 
+function configure_repos {
+    echo "Installing Mesosphere repository..."
+    apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF
+    echo "deb http://repos.mesosphere.io/${DISTRO} ${CODENAME} main" \
+        | tee /etc/apt/sources.list.d/mesosphere.list
+
+    echo "Installing InfluxDB repository..."
+    curl -ssL https://repos.influxdata.com/influxdb.key | apt-key add -
+    echo "deb https://repos.influxdata.com/${DISTRO} ${CODENAME} stable" \
+        | tee /etc/apt/sources.list.d/influxdb.list
+
+    echo "Installing Grafana repository..."
+    curl -ssL https://packagecloud.io/gpg.key | apt-key add -
+    echo "deb https://packagecloud.io/grafana/stable/debian/ wheezy main" \
+        | tee /etc/apt/sources.list.d/grafana.list
+
+    echo "Refreshing metadata..."
+    apt-get -y update
+}
+
 function install_zookeeper {
     echo "Installing ZooKeeper..."
     apt-get -y install zookeeperd
@@ -52,14 +72,6 @@ function install_zookeeper {
 }
 
 function install_mesos {
-    echo "Installing Mesosphere repository..."
-    apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF
-    echo "deb http://repos.mesosphere.io/${DISTRO} ${CODENAME} main" \
-        | tee /etc/apt/sources.list.d/mesosphere.list
-
-    echo "Refreshing metadata..."
-    apt-get -y update
-
     _install_pkg_with_version mesos $MESOS_RELEASE
 }
 
@@ -167,6 +179,50 @@ or something similar.
 END
 }
 
+function install_influxdb {
+    apt-get install influxdb
+    service influxdb restart
+
+    # Wait for InfluxDB to start before proceeding
+    echo "Waiting for InfluxDB to start..."
+    while ! curl -sG "http://localhost:8086/query?u=admin&p=admin" \
+        --data-urlencode "q=SHOW DATABASES" > /dev/null 2>&1; do
+        echo -n "."
+        sleep 1
+    done
+    echo
+
+    echo "Creating 'snap' database in InfluxDB..."
+    # Create snap database in InfluxDB
+    curl -sG -X POST "http://localhost:8086/query?u=admin&p=admin" \
+        --data-urlencode "q=CREATE DATABASE snap"
+}
+
+function install_grafana {
+    apt-get install grafana
+    update-rc.d grafana-server defaults 95 10
+    service grafana-server restart
+
+    echo "Configuring Grafana..."
+    local COOKIEJAR=$(mktemp)
+
+    curl -s -H 'Content-Type: application/json; charset=UTF-8'              \
+        --data-binary '{"user": "admin", "email": "", "password": "admin"}' \
+        --cookie-jar "$COOKIEJAR" http://localhost:3000/login
+    echo
+
+    echo "Adding InfluxDB datasource 'influx' ..."
+    curl -s -H 'Content-Type: application/json; charset=UTF-8' \
+        --cookie "$COOKIEJAR" --data-binary '{"name": "influx", "type": "influxdb", "url": "http://localhost:8086", "access": "proxy", "database": "snap"}"' \
+        http://localhost:3000/api/datasources
+    echo
+
+    echo "Importing Grafana dashboard 'mesos.json' ..."
+    curl -s -H 'Content-Type: application/json; charset=UTF-8' --cookie "$COOKIEJAR" \
+        --data @/vagrant/examples/grafana/mesos.json http://localhost:3000/api/dashboards/db
+    echo
+}
+
 function main {
     parse_args "$@"
     install_prereqs
@@ -177,6 +233,9 @@ function main {
 
     install_golang
     install_snap
+
+    install_influxdb
+    install_grafana
 }
 
 main "$@"
