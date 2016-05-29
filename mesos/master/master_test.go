@@ -107,8 +107,11 @@ func TestGetFrameworksMetricTypes(t *testing.T) {
 		})
 		Convey("Valid namespace parts should be returned as a slice of strings", func() {
 			So(len(namespaces), ShouldBeGreaterThan, 0)
-			So(valueExistsInSlice("resources/disk", namespaces), ShouldBeTrue)
-			So(valueExistsInSlice("resources/foo", namespaces), ShouldBeFalse)
+			So(namespaces, ShouldContain, "resources/disk")
+			So(namespaces, ShouldNotContain, "resources/foo")
+		})
+		Convey("Should not contain non-metrics namespaces, e.g. 'id'", func() {
+			So(namespaces, ShouldNotContain, "id")
 		})
 	})
 }
@@ -200,13 +203,4 @@ func extractHostFromURL(u string) (string, error) {
 		return "", err
 	}
 	return parsed.Host, nil
-}
-
-func valueExistsInSlice(search string, slice []string) bool {
-	for _, elem := range slice {
-		if elem == search {
-			return true
-		}
-	}
-	return false
 }
