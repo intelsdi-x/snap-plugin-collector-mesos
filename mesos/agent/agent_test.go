@@ -171,6 +171,37 @@ func TestGetMonitoringStatistics(t *testing.T) {
 	})
 }
 
+func Test_normalizePerfEventName(t *testing.T) {
+	Convey("When passed a perf_event name containing mixed case and dashes", t, func() {
+		Convey("Should return a normalized perf event name", func() {
+			So(normalizePerfEventName("fooBarBaz"), ShouldEqual, "foobarbaz")
+			So(normalizePerfEventName("foo-barBaz"), ShouldEqual, "foo_barbaz")
+			So(normalizePerfEventName("foo_bar-baz"), ShouldEqual, "foo_bar_baz")
+		})
+	})
+}
+
+func Test_deleteFromSlice(t *testing.T) {
+	Convey("When deleting a string or regex from a slice", t, func() {
+		testData := []string{"foo", "bar", "foo/bar", "foo/bar_one", "foo/bar_two"}
+
+		Convey("Should delete all strings matching a regex", func() {
+			result := deleteFromSlice(testData, "^foo/bar_.*")
+			So(result, ShouldNotContain, "foo/bar_one")
+			So(result, ShouldNotContain, "foo/bar_two")
+			So(result, ShouldContain, "foo")
+			So(result, ShouldContain, "bar")
+			So(result, ShouldContain, "foo/bar")
+		})
+		Convey("Should delete a single string", func() {
+			result := deleteFromSlice(testData, "foo")
+			So(result, ShouldNotContain, "foo")
+			So(result, ShouldNotContain, "foo/bar")
+			So(result, ShouldContain, "bar")
+		})
+	})
+}
+
 func extractHostFromURL(u string) (string, error) {
 	parsed, err := url.Parse(u)
 	if err != nil {
