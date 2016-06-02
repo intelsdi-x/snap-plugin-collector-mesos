@@ -41,14 +41,25 @@ func TestMesos_GetMetricTypes(t *testing.T) {
 		panic(err)
 	}
 
-	Convey("Should return metric types for the '/metrics/snapshot' endpoint", t, func() {
+	var namespaces []string
+	for i := 0; i < len(mts); i++ {
+		namespaces = append(namespaces, mts[i].Namespace().String())
+	}
+
+	Convey("Should return metric types for the master and agent", t, func() {
 		So(err, ShouldBeNil)
 		So(len(mts), ShouldBeGreaterThan, 1)
+		So(namespaces, ShouldContain, "/intel/mesos/master/system/cpus_total")
+		So(namespaces, ShouldContain, "/intel/mesos/master/*/resources/cpus")
+		So(namespaces, ShouldContain, "/intel/mesos/agent/system/cpus_total")
+		So(namespaces, ShouldContain, "/intel/mesos/agent/*/*/cpus_limit")
 	})
 
-	Convey("Should return metric types for the '/monitor/statistics' endpoint", t, func() {
-		So(err, ShouldBeNil)
-		So(len(mts), ShouldBeGreaterThan, 1)
+	// In both the Vagrant and Travis provisioning scripts, "network/port_mapping" is not
+	// enabled because Mesos hasn't been compiled with that isolator. If that changes, this
+	// test case will need to be updated.
+	Convey("Should only return metrics for available features on a Mesos agent", t, func() {
+		So(namespaces, ShouldNotContain, "/intel/mesos/agent/*/*/net_rx_bytes")
 	})
 }
 
