@@ -75,7 +75,10 @@ func TestMesos_CollectMetrics(t *testing.T) {
 
 	Convey("Collect metrics from a Mesos master and agent", t, func() {
 		mc := NewMesosCollector()
-		mc.GetMetricTypes(cfg)
+		_, err := mc.GetMetricTypes(cfg)
+		if err != nil {
+			panic(err)
+		}
 
 		Convey("Should collect requested metrics from the master", func() {
 			mts := []plugin.MetricType{
@@ -92,8 +95,10 @@ func TestMesos_CollectMetrics(t *testing.T) {
 					Config_:    cfg.ConfigDataNode,
 				},
 				plugin.MetricType{
-					Namespace_: core.NewNamespace("intel", "mesos", "master", "*", "used_resources", "cpus"),
-					Config_:    cfg.ConfigDataNode,
+					Namespace_: core.NewNamespace("intel", "mesos", "master").
+						AddDynamicElement("framework_id", "Framework ID").
+						AddStaticElements("used_resources", "cpus"),
+					Config_: cfg.ConfigDataNode,
 				},
 			}
 
@@ -116,8 +121,11 @@ func TestMesos_CollectMetrics(t *testing.T) {
 					Config_:    cfg.ConfigDataNode,
 				},
 				plugin.MetricType{
-					Namespace_: core.NewNamespace("intel", "mesos", "agent", "*", "*", "mem_total_bytes"),
-					Config_:    cfg.ConfigDataNode,
+					Namespace_: core.NewNamespace("intel", "mesos", "agent").
+						AddDynamicElement("framework_id", "Framework ID").
+						AddDynamicElement("executor_id", "Executor ID").
+						AddStaticElement("mem_total_bytes"),
+					Config_: cfg.ConfigDataNode,
 				},
 			}
 
