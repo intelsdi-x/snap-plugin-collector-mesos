@@ -19,12 +19,12 @@ IP_ADDRESS     = '10.180.10.180'
 Vagrant.configure(2) do |config|
   config.vm.box = 'ubuntu/trusty64'
   config.vm.network 'private_network', ip: IP_ADDRESS
-  config.vm.network 'forwarded_port', guest: 8080, host: 8080
-  config.vm.network 'forwarded_port', guest: 5050, host: 5050 
-  config.vm.network 'forwarded_port', guest: 5051, host: 5051
-  config.vm.network 'forwarded_port', guest: 3000, host: 3000
-  config.vm.network 'forwarded_port', guest: 8083, host: 8083
 
+  # Forward ports from the guest to the host for ease of access. All services
+  # should still be available at IP_ADDRESS:port as well.
+  [3000, 5050, 5051, 8080, 8083].each do |port|
+    config.vm.network 'forwarded_port', guest: port, host: port
+  end
 
   config.vm.provider 'virtualbox' do |vb|
     vb.name   = 'vagrant-snap-mesos'

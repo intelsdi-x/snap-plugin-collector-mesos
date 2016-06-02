@@ -50,8 +50,11 @@ function install_prereqs {
 
 function configure_repos {
     echo "Installing Mesosphere repository..."
-    #apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF
-    apt-key add /vagrant/scripts/key.txt
+    # We use hkp://keyserver.ubuntu.com:80 to work around corporate firewalls
+    # that block the native HKP port 11371. Since HKP is a higher-level protocol
+    # over HTTP, this should be fine, but *could* pose a problem if deep packet
+    # inspection is enabled. -- roger, 2016/06/02
+    apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF
     echo "deb http://repos.mesosphere.io/${DISTRO} ${CODENAME} main" \
         | tee /etc/apt/sources.list.d/mesosphere.list
 
@@ -86,7 +89,6 @@ function install_marathon {
     echo "Installing Marathon ..."
     apt-get -y install marathon
     service marathon restart
-    echo "Marathon started..."
 }
 
 function configure_mesos {
