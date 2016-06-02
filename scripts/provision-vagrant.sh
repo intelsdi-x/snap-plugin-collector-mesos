@@ -42,11 +42,16 @@ function install_prereqs {
     apt-get -y update
     apt-get -y install apt-transport-https ca-certificates git \
         linux-tools-common linux-tools-generic linux-tools-$(uname -r)
+    echo debconf shared/accepted-oracle-license-v1-1 select true | sudo debconf-set-selections
+    echo debconf shared/accepted-oracle-license-v1-1 seen true | sudo debconf-set-selections
+    apt-get install -y oracle-java8-installer oracle-java8-set-default
+
 }
 
 function configure_repos {
     echo "Installing Mesosphere repository..."
-    apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF
+    #apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF
+    apt-key add /vagrant/scripts/key.txt
     echo "deb http://repos.mesosphere.io/${DISTRO} ${CODENAME} main" \
         | tee /etc/apt/sources.list.d/mesosphere.list
 
@@ -60,6 +65,8 @@ function configure_repos {
     echo "deb https://packagecloud.io/grafana/stable/debian/ wheezy main" \
         | tee /etc/apt/sources.list.d/grafana.list
 
+    echo "Installing Java repo"
+    add-apt-repository -y ppa:webupd8team/java
     echo "Refreshing metadata..."
     apt-get -y update
 }
@@ -77,12 +84,8 @@ function install_mesos {
 
 function install_marathon {
     echo "Installing Marathon ..."
-    # Install Java 8 from Oracle's PPA
-    add-apt-repository ppa:webupd8team/java
-    apt-get update -y
-    apt-get install -y oracle-java8-installer oracle-java8-set-default
     apt-get -y install marathon
-    marathon&
+    service marathon restart
     echo "Marathon started..."
 }
 
@@ -236,8 +239,8 @@ function install_grafana {
 
 function main {
     parse_args "$@"
-    install_prereqs
     configure_repos
+    install_prereqs
 
     install_zookeeper
     install_mesos
