@@ -75,6 +75,17 @@ function install_mesos {
     _install_pkg_with_version mesos $MESOS_RELEASE
 }
 
+function install_marathon {
+    echo "Installing Marathon ..."
+    # Install Java 8 from Oracle's PPA
+    add-apt-repository ppa:webupd8team/java
+    apt-get update -y
+    apt-get install -y oracle-java8-installer oracle-java8-set-default
+    apt-get -y install marathon
+    marathon&
+    echo "Marathon started..."
+}
+
 function configure_mesos {
     mkdir -p /etc/{mesos,mesos-master,mesos-slave}
 
@@ -226,6 +237,7 @@ function install_grafana {
 function main {
     parse_args "$@"
     install_prereqs
+    configure_repos
 
     install_zookeeper
     install_mesos
@@ -236,6 +248,8 @@ function main {
 
     install_influxdb
     install_grafana
+
+    install_marathon
 }
 
 main "$@"

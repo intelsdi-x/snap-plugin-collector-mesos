@@ -158,8 +158,8 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 			tags := map[string]string{"source": configItems["master"]}
 
 			for _, requested := range requestedMaster {
-				// TODO(roger): requested.IsDynamic() doesn't appear to work here
-				if requested.Strings()[3] == "*" {
+				isDynamic, _ := requested.IsDynamic()
+				if isDynamic {
 					n := requested.Strings()[4:]
 
 					// Iterate through the array of frameworks returned by GetFrameworks()
@@ -168,25 +168,22 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 						if val == nil {
 							return nil, fmt.Errorf("error: requested metric %v not found", requested.String())
 						}
-
-						namespace := core.NewNamespace(pluginVendor, pluginName, "master", framework.ID)
-						namespace = namespace.AddStaticElements(n...)
+						// substituting "framework" wildcard with particular framework id
+						requested[3].Value = framework.ID
 						// TODO(roger): units
-						metrics = append(metrics, *plugin.NewMetricType(namespace, now, tags, "", val))
+						metrics = append(metrics, *plugin.NewMetricType(requested, now, tags, "", val))
 
 					}
 				} else {
 					n := requested.Strings()[3:]
+
 					val, ok := snapshot[strings.Join(n, "/")]
 					if !ok {
 						return nil, fmt.Errorf("error: requested metric %s not found", requested.String())
 					}
-
-					namespace := core.NewNamespace(pluginVendor, pluginName, "master")
-					namespace = namespace.AddStaticElements(n...)
 					//TODO(kromar): is it possible to provide unit NewMetricType(ns, time, tags, unit, value)?
 					// I'm leaving empty string for now...
-					metrics = append(metrics, *plugin.NewMetricType(namespace, now, tags, "", val))
+					metrics = append(metrics, *plugin.NewMetricType(requested, now, tags, "", val))
 				}
 			}
 		} else {
@@ -209,21 +206,20 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 
 		for _, requested := range requestedAgent {
 			n := requested.Strings()[5:]
-
-			// TODO(roger): requested.IsDynamic() doesn't appear to work here
-			if requested.Strings()[3] == "*" {
+			isDynamic, _ := requested.IsDynamic()
+			if isDynamic {
 				// Iterate through the array of executors returned by GetMonitoringStatistics()
 				for _, exec := range executors {
 					val := ns.GetValueByNamespace(exec.Statistics, n)
 					if val == nil {
 						return nil, fmt.Errorf("error: requested metric %v not found", requested.String())
 					}
-
-					namespace := core.NewNamespace(
-						pluginVendor, pluginName, "agent", exec.Framework, exec.ID)
-					namespace = namespace.AddStaticElements(n...)
+					// substituting "framework" wildcard with particular framework id
+					requested[3].Value = exec.Framework
+					// substituting "executor" wildcard with particular executor id
+					requested[4].Value = exec.ID
 					// TODO(roger): units
-					metrics = append(metrics, *plugin.NewMetricType(namespace, now, tags, "", val))
+					metrics = append(metrics, *plugin.NewMetricType(requested, now, tags, "", val))
 
 				}
 			} else {
@@ -234,10 +230,8 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 					return nil, fmt.Errorf("error: requested metric %v not found", requested.String())
 				}
 
-				namespace := core.NewNamespace(pluginVendor, pluginName, "agent")
-				namespace = namespace.AddStaticElements(n...)
 				//TODO(kromar): units here also?
-				metrics = append(metrics, *plugin.NewMetricType(namespace, now, tags, "", val))
+				metrics = append(metrics, *plugin.NewMetricType(requested, now, tags, "", val))
 			}
 		}
 	}

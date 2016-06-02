@@ -19,6 +19,9 @@ IP_ADDRESS     = '10.180.10.180'
 Vagrant.configure(2) do |config|
   config.vm.box = 'ubuntu/trusty64'
   config.vm.network 'private_network', ip: IP_ADDRESS
+  config.vm.network 'forwarded_port', guest: 8080, host: 8888
+  config.vm.network 'forwarded_port', guest: 5050, host: 5050 
+  config.vm.network 'forwarded_port', guest: 5051, host: 5051 
 
   config.vm.provider 'virtualbox' do |vb|
     vb.name   = 'vagrant-snap-mesos'
