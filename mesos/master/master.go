@@ -49,6 +49,12 @@ func GetFrameworksMetricTypes() ([]string, error) {
 	if err := ns.FromCompositeObject(Framework{}, "", &namespaces); err != nil {
 		return nil, err
 	}
+	for i := 0; i < len(namespaces); i++ {
+		if namespaces[i] == "id" {
+			namespaces = append(namespaces[:i], namespaces[i+1:]...)
+			break
+		}
+	}
 	return namespaces, nil
 
 }

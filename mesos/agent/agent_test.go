@@ -30,6 +30,42 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+func TestGetFlags(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		testData := Flags{
+			Flags: map[string]string{
+				"isolation": "cgroups/cpu,cgroups/mem",
+				"port":      "5051",
+			},
+		}
+		td, err := json.Marshal(testData)
+		if err != nil {
+			panic(err)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(200)
+		w.Write(td)
+	}))
+	defer ts.Close()
+
+	host, err := extractHostFromURL(ts.URL)
+	if err != nil {
+		panic(err)
+	}
+
+	Convey("When getting flags from the Mesos agent", t, func() {
+		flags, err := GetFlags(host)
+
+		Convey("Should return a map of the configuration flags", func() {
+			So(err, ShouldBeNil)
+			So(flags["isolation"], ShouldEqual, "cgroups/cpu,cgroups/mem")
+			So(flags["port"], ShouldEqual, "5051")
+			So(flags["perf_events"], ShouldEqual, "")
+		})
+	})
+}
+
 func TestGetMetricsSnapshot(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		td, err := json.Marshal(map[string]float64{
@@ -131,6 +167,37 @@ func TestGetMonitoringStatistics(t *testing.T) {
 					So(*exec.Statistics.MemTotalBytes, ShouldEqual, 2000)
 				}
 			}
+		})
+	})
+}
+
+func Test_normalizePerfEventName(t *testing.T) {
+	Convey("When passed a perf_event name containing mixed case and dashes", t, func() {
+		Convey("Should return a normalized perf event name", func() {
+			So(normalizePerfEventName("fooBarBaz"), ShouldEqual, "foobarbaz")
+			So(normalizePerfEventName("foo-barBaz"), ShouldEqual, "foo_barbaz")
+			So(normalizePerfEventName("foo_bar-baz"), ShouldEqual, "foo_bar_baz")
+		})
+	})
+}
+
+func Test_deleteFromSlice(t *testing.T) {
+	Convey("When deleting a string or regex from a slice", t, func() {
+		testData := []string{"foo", "bar", "foo/bar", "foo/bar_one", "foo/bar_two"}
+
+		Convey("Should delete all strings matching a regex", func() {
+			result := deleteFromSlice(testData, "^foo/bar_.*")
+			So(result, ShouldNotContain, "foo/bar_one")
+			So(result, ShouldNotContain, "foo/bar_two")
+			So(result, ShouldContain, "foo")
+			So(result, ShouldContain, "bar")
+			So(result, ShouldContain, "foo/bar")
+		})
+		Convey("Should delete a single string", func() {
+			result := deleteFromSlice(testData, "foo")
+			So(result, ShouldNotContain, "foo")
+			So(result, ShouldNotContain, "foo/bar")
+			So(result, ShouldContain, "bar")
 		})
 	})
 }
