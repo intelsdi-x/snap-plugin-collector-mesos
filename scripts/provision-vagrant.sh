@@ -14,11 +14,12 @@ CODENAME=$(lsb_release -cs)
 function parse_args {
     while [[ $# > 1 ]]; do
         case "$1" in
-            --mesos_release)  MESOS_RELEASE="$2"                ; shift  ;;
-            --golang_release) GOLANG_RELEASE="$2"               ; shift  ;;
-            --snap_release)   SNAP_RELEASE="$2"                 ; shift  ;;
-            --ip_address)     IP_ADDRESS="${2:-127.0.0.1}"      ; shift  ;;
-            --*)              echo "Error: invalid option '$1'" ; exit 1 ;;
+            --mesos_release)    MESOS_RELEASE="$2"                ; shift  ;;
+            --marathon_release) MARATHON_RELEASE="$2"             ; shift  ;;
+            --golang_release)   GOLANG_RELEASE="$2"               ; shift  ;;
+            --snap_release)     SNAP_RELEASE="$2"                 ; shift  ;;
+            --ip_address)       IP_ADDRESS="${2:-127.0.0.1}"      ; shift  ;;
+            --*)                echo "Error: invalid option '$1'" ; exit 1 ;;
         esac
         shift
     done
@@ -42,11 +43,19 @@ function install_prereqs {
     apt-get -y update
     apt-get -y install apt-transport-https ca-certificates git \
         linux-tools-common linux-tools-generic linux-tools-$(uname -r)
+    echo debconf shared/accepted-oracle-license-v1-1 select true | sudo debconf-set-selections
+    echo debconf shared/accepted-oracle-license-v1-1 seen true | sudo debconf-set-selections
+    apt-get install -y oracle-java8-installer oracle-java8-set-default
+
 }
 
 function configure_repos {
     echo "Installing Mesosphere repository..."
-    apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF
+    # We use hkp://keyserver.ubuntu.com:80 to work around corporate firewalls
+    # that block the native HKP port 11371. Since HKP is a higher-level protocol
+    # over HTTP, this should be fine, but *could* pose a problem if deep packet
+    # inspection is enabled. -- roger, 2016/06/02
+    apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF
     echo "deb http://repos.mesosphere.io/${DISTRO} ${CODENAME} main" \
         | tee /etc/apt/sources.list.d/mesosphere.list
 
@@ -60,6 +69,8 @@ function configure_repos {
     echo "deb https://packagecloud.io/grafana/stable/debian/ wheezy main" \
         | tee /etc/apt/sources.list.d/grafana.list
 
+    echo "Installing Java repo"
+    add-apt-repository -y ppa:webupd8team/java
     echo "Refreshing metadata..."
     apt-get -y update
 }
@@ -73,6 +84,12 @@ function install_zookeeper {
 
 function install_mesos {
     _install_pkg_with_version mesos $MESOS_RELEASE
+}
+
+function install_marathon {
+    echo "Installing Marathon ..."
+    _install_pkg_with_version marathon $MARATHON_RELEASE
+    service marathon restart
 }
 
 function configure_mesos {
@@ -125,9 +142,14 @@ function install_golang {
 
     echo "export GOPATH=${GOPATH}"                              >> /etc/profile
     echo "export PATH=\${PATH}:\${GOPATH}/bin:${GOROOT}/go/bin" >> /etc/profile
+    echo "export PATH=\${PATH}:\${GOPATH}/bin"                  >> /etc/profile
 
     mkdir -p "${GOPATH}/src/github.com/intelsdi-x" && chown -R vagrant:vagrant $GOPATH
     ln -fs /vagrant "${GOPATH}/src/github.com/intelsdi-x/snap-plugin-collector-mesos"
+
+    # Bring in godep so we don't have to do this manually each time
+    . /etc/profile
+    go get github.com/tools/godep
 
     cat << END
 --------------------------------------------------------------
@@ -225,6 +247,7 @@ function install_grafana {
 
 function main {
     parse_args "$@"
+    configure_repos
     install_prereqs
 
     install_zookeeper
@@ -236,6 +259,8 @@ function main {
 
     install_influxdb
     install_grafana
+
+    install_marathon
 }
 
 main "$@"
