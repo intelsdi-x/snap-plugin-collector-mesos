@@ -163,6 +163,15 @@ of this plugin. More information is available in [GitHub issue #11][github-issue
   values are provided to the `--perf_events` option on the Mesos agent, you'll also be able to collect per-container
   perf metrics as defined in the [`PerfStatistics` struct][perfstatistics-struct].
 
+#### Metric tags
+
+Namespace                   | Tag            | Description
+----------------------------|----------------|------------
+`/intel/mesos/**`           | `source`       | IP and port of the Mesos master/agent that this plugin is connecting to. Depending on the network configuration of a system, the value of this tag _could_ be different than the value of the built-in `plugin_running_on` tag in Snap.
+`/intel/mesos/master/*/**`  | `framework_id` | The UUID that the Mesos master assigned to a given framework.
+`/intel/mesos/agent/*/*/**` | `framework_id` | The UUID that the Mesos master assigned to a given framework. Allows executors to be grouped/queried on a per-framework basis.
+`/intel/mesos/agent/*/*/**` | `executor_id`  | The ID that a scheduler assigned to a specific executor (container) running on a Mesos agent.
+
 ### Examples
 There are examples of the Snap global configuration and various tasks located in the [examples](examples) directory.
 Specifically, these include:
