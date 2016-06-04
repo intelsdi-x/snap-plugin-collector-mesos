@@ -14,11 +14,12 @@ CODENAME=$(lsb_release -cs)
 function parse_args {
     while [[ $# > 1 ]]; do
         case "$1" in
-            --mesos_release)  MESOS_RELEASE="$2"                ; shift  ;;
-            --golang_release) GOLANG_RELEASE="$2"               ; shift  ;;
-            --snap_release)   SNAP_RELEASE="$2"                 ; shift  ;;
-            --ip_address)     IP_ADDRESS="${2:-127.0.0.1}"      ; shift  ;;
-            --*)              echo "Error: invalid option '$1'" ; exit 1 ;;
+            --mesos_release)    MESOS_RELEASE="$2"                ; shift  ;;
+            --marathon_release) MARATHON_RELEASE="$2"             ; shift  ;;
+            --golang_release)   GOLANG_RELEASE="$2"               ; shift  ;;
+            --snap_release)     SNAP_RELEASE="$2"                 ; shift  ;;
+            --ip_address)       IP_ADDRESS="${2:-127.0.0.1}"      ; shift  ;;
+            --*)                echo "Error: invalid option '$1'" ; exit 1 ;;
         esac
         shift
     done
@@ -87,7 +88,7 @@ function install_mesos {
 
 function install_marathon {
     echo "Installing Marathon ..."
-    apt-get -y install marathon
+    _install_pkg_with_version marathon $MARATHON_RELEASE
     service marathon restart
 }
 
@@ -141,9 +142,14 @@ function install_golang {
 
     echo "export GOPATH=${GOPATH}"                              >> /etc/profile
     echo "export PATH=\${PATH}:\${GOPATH}/bin:${GOROOT}/go/bin" >> /etc/profile
+    echo "export PATH=\${PATH}:\${GOPATH}/bin"                  >> /etc/profile
 
     mkdir -p "${GOPATH}/src/github.com/intelsdi-x" && chown -R vagrant:vagrant $GOPATH
     ln -fs /vagrant "${GOPATH}/src/github.com/intelsdi-x/snap-plugin-collector-mesos"
+
+    # Bring in godep so we don't have to do this manually each time
+    . /etc/profile
+    go get github.com/tools/godep
 
     cat << END
 --------------------------------------------------------------
