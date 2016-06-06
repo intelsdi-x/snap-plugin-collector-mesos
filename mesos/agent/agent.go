@@ -112,14 +112,14 @@ func GetMonitoringStatisticsMetricTypes(host string) ([]string, error) {
 
 	// Isolators are defined using a comma-separated string passed to the "--isolation" flag on the Mesos agent.
 	// See https://github.com/apache/mesos/blob/0.28.1/src/slave/containerizer/mesos/containerizer.cpp#L196-L223
-	isolators := strings.Split(",", flags["isolation"])
+	isolators := strings.Split(flags["isolation"], ",")
 
 	if str.Contains(isolators, "cgroups/perf_event") {
 		// Expects a perf event from the output of `perf list`. Mesos then normalizes the event name. See
 		// https://github.com/apache/mesos/blob/0.28.1/src/linux/perf.cpp#L65-L71
 		namespaces = deleteFromSlice(namespaces, "^perf/.*")
 		var normalizedPerfEvents []string
-		perfEvents := strings.Split(",", flags["perf_events"])
+		perfEvents := strings.Split(flags["perf_events"], ",")
 
 		for _, event := range perfEvents {
 			event = fmt.Sprintf("perf/%s", normalizePerfEventName(event))
@@ -127,7 +127,11 @@ func GetMonitoringStatisticsMetricTypes(host string) ([]string, error) {
 		}
 		namespaces = append(namespaces, normalizedPerfEvents...)
 	} else {
-		namespaces = deleteFromSlice(namespaces, "^perf/.*")
+		namespaces = deleteFromSlice(namespaces, "^perf.*")
+	}
+
+	if !str.Contains(isolators, "posix/disk") {
+		namespaces = deleteFromSlice(namespaces, "^disk_.*")
 	}
 
 	if !str.Contains(isolators, "network/port_mapping") {

@@ -104,6 +104,10 @@ func (m *Mesos) GetMetricTypes(cfg plugin.ConfigType) ([]plugin.MetricType, erro
 		}
 
 		agent_stats, err := agent.GetMonitoringStatisticsMetricTypes(configItems["agent"])
+		if err != nil {
+			return nil, err
+		}
+
 		for _, key := range agent_stats {
 			namespace := core.NewNamespace(pluginVendor, pluginName, "agent").
 				AddDynamicElement("framework_id", "Framework ID").
@@ -255,17 +259,19 @@ func getConfig(cfg interface{}) (map[string]string, error) {
 	agent_cfg, agent_err := config.GetConfigItem(cfg, "agent")
 
 	if master_err != nil && agent_err != nil {
-		return items, fmt.Errorf("error: no global config specified for \"master\" and \"agent\".")
+		return items, fmt.Errorf("error: no global config specified for 'master' and 'agent'.")
 	}
 
+	// TODO(roger): since this plugin will typically only be deployed on a master *or* an agent,
+	// does it make sense to write these warning messages to the log?
 	items["master"], ok = master_cfg.(string)
 	if !ok {
-		log.Warn("no global config specified for \"master\". only \"agent\" metrics will be collected.")
+		log.Warn("no global config specified for 'master', only 'agent' metrics will be collected.")
 	}
 
 	items["agent"], ok = agent_cfg.(string)
 	if !ok {
-		log.Warn("no global config specified for \"agent\". only \"master\" metrics will be collected.")
+		log.Warn("no global config specified for 'agent', only 'master' metrics will be collected.")
 	}
 
 	return items, nil
