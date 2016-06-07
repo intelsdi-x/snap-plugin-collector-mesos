@@ -40,8 +40,7 @@ and the userland tools that enable you to run the `perf` command. On Ubuntu, thi
 
 ### Installation
 #### Download the Mesos plugin binary
-This plugin isn't currently available for download as a pre-built binary, although we hope to offer this in the future.
-For now, please proceed with [building the plugin from source](#building-the-plugin-from-source).
+You can download pre-built binaries for Linux x64 from this plugin's [GitHub Releases][releases] page.
 
 #### Building the plugin from source
 Clone this GitHub repository:
@@ -313,6 +312,7 @@ under the [Apache Software License, version 2.0](LICENSE).
 [mesosphere-downloads]: https://mesosphere.com/downloads/
 [network-usage-info]: https://github.com/intelsdi-x/snap-plugin-collector-mesos/blob/master/mesos/mesos_pb2/mesos_pb2.go#L3141-L3149
 [perfstatistics-struct]: https://github.com/intelsdi-x/snap-plugin-collector-mesos/blob/master/mesos/mesos_pb2/mesos_pb2.go#L3541-L3610
+[releases]: https://github.com/intelsdi-x/snap-plugin-collector-mesos/releases
 [resourcestatistics-struct]: https://github.com/intelsdi-x/snap-plugin-collector-mesos/blob/master/mesos/mesos_pb2/mesos_pb2.go#L3086-L3165
 [roger-github]: https://github.com/rji
 [snap-getting-started]: https://github.com/intelsdi-x/snap/blob/master/README.md#getting-started
