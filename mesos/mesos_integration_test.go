@@ -19,6 +19,7 @@ limitations under the License.
 package mesos
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -27,6 +28,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/agent"
 	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/master"
 	"github.com/intelsdi-x/snap-plugin-utilities/config"
 	"github.com/intelsdi-x/snap/control/plugin"
@@ -68,14 +70,14 @@ func TestMesos_GetMetricTypes(t *testing.T) {
 
 func TestMesos_CollectMetrics(t *testing.T) {
 	cfg := setupCfg()
-	master, err := config.GetConfigItem(cfg, "master")
+	cfgItems, err := config.GetConfigItems(cfg, []string{"master", "agent"}...)
 	if err != nil {
 		panic(err)
 	}
 
 	// Clean slate
-	teardown(master.(string))
-	launchTasks(master.(string))
+	teardown(cfgItems["master"].(string))
+	launchTasks(cfgItems["master"].(string), cfgItems["agent"].(string))
 
 	Convey("Collect metrics from a Mesos master and agent", t, func() {
 		mc := NewMesosCollector()
@@ -176,7 +178,7 @@ func TestMesos_CollectMetrics(t *testing.T) {
 		})
 	})
 
-	teardown(master.(string))
+	teardown(cfgItems["master"].(string))
 }
 
 // setupCfg builds a new ConfigDataNode that specifies the Mesos master and agent host / port
@@ -201,23 +203,68 @@ func setupCfg() plugin.ConfigType {
 }
 
 // Launch some Mesos tasks
-func launchTasks(master string) {
+func launchTasks(masterHost string, agentHost string) {
 	cmd := "mesos"
 	id := time.Now().Unix()
 	task1Args := []string{
-		"execute", fmt.Sprintf("--master=%s", master),
+		"execute", fmt.Sprintf("--master=%s", masterHost),
 		fmt.Sprintf("--name=sleep.%v", id),
-		"--command=sleep 60",
+		"--resources=cpus:0.5;mem:64;disk:32",
+		"--command=date && sleep 60",
 	}
 	task2Args := []string{
-		"execute", fmt.Sprintf("--master=%s", master),
+		"execute", fmt.Sprintf("--master=%s", masterHost),
 		fmt.Sprintf("--name=sleep: %v", id),
-		"--command=sleep 60",
+		"--resources=cpus:0.5;mem:64;disk:32",
+		"--command=date && sleep 60",
 	}
 
-	go exec.Command(cmd, task1Args...).Run()
-	go exec.Command(cmd, task2Args...).Run()
-	time.Sleep(1)
+	launch := func(cmd *exec.Cmd) {
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+		err := cmd.Run()
+		if err != nil {
+			fmt.Println(stderr.String())
+			panic(err)
+		}
+	}
+
+	go launch(exec.Command(cmd, task1Args...))
+	go launch(exec.Command(cmd, task2Args...))
+
+	// There is a delay until disk usage information is available for a newly-launched executor. See:
+	//   * https://github.com/apache/mesos/blob/0.28.1/src/slave/containerizer/mesos/isolators/posix/disk.cpp#L352-L357
+	//   * https://github.com/apache/mesos/blob/0.28.1/src/tests/disk_quota_tests.cpp#L496-L514
+	//
+	// Therefore, this function needs to fetch statistics for the new executors it just created and block until
+	// the disk usage metrics are available. Otherwise, we'll see some flakiness in the integration tests:
+	//
+	//   * /home/vagrant/work/src/github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/mesos_integration_test.go
+	//   Line 157:
+	//   Expected: '8'
+	//   Actual:   '6'
+	//   (Should be equal)
+	//
+	done := map[string]bool{}
+	for len(done) != 2 {
+		executors, err := agent.GetMonitoringStatistics(agentHost)
+		if err != nil {
+			panic(err)
+		}
+		if len(executors) != 2 {
+			time.Sleep(1)
+			continue
+		}
+		for _, exec := range executors {
+			if done[exec.ID] != true {
+				if exec.Statistics.DiskUsedBytes != nil {
+					done[exec.ID] = true
+				} else {
+					time.Sleep(1)
+				}
+			}
+		}
+	}
 }
 
 // Get the system to a clean state by tearing down all active frameworks on the Mesos master, thus killing all tasks.

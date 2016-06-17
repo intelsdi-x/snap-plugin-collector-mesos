@@ -104,6 +104,7 @@ function configure_mesos {
     # Agent
     # Note: there is a known bug in Mesos when using the 'cgroups/perf_event' isolator
     # on specific kernels and platforms. For more info, see MESOS-4705.
+    echo "1secs"                                                 > /etc/mesos-slave/container_disk_watch_interval
     echo "mesos"                                                 > /etc/mesos-slave/containerizers
     echo "${IP_ADDRESS}"                                         > /etc/mesos-slave/hostname
     echo "${IP_ADDRESS}"                                         > /etc/mesos-slave/ip

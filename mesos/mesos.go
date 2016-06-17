@@ -170,7 +170,7 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 					for _, framework := range frameworks {
 						val := ns.GetValueByNamespace(framework, n)
 						if val == nil {
-							return nil, fmt.Errorf("error: requested metric %v not found", requested.String())
+							continue
 						}
 						// substituting "framework" wildcard with particular framework id
 						requested[3].Value = framework.ID
@@ -216,7 +216,9 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 				for _, exec := range executors {
 					val := ns.GetValueByNamespace(exec.Statistics, n)
 					if val == nil {
-						return nil, fmt.Errorf("error: requested metric %v not found", requested.String())
+						// If the value is nil, ignore this particular metric for this
+						// invocation of CollectMetrics() and continue.
+						continue
 					}
 					// substituting "framework" wildcard with particular framework id
 					requested[3].Value = exec.Framework
