@@ -48,6 +48,7 @@ func Meta() *plugin.PluginMeta {
 }
 
 func NewMesosCollector() *Mesos {
+	log.Debug("Created a new instance of the Mesos collector plugin")
 	return &Mesos{}
 }
 
@@ -61,25 +62,30 @@ func (m *Mesos) GetConfigPolicy() (*cpolicy.ConfigPolicy, error) {
 func (m *Mesos) GetMetricTypes(cfg plugin.ConfigType) ([]plugin.MetricType, error) {
 	configItems, err := getConfig(cfg)
 	if err != nil {
+		log.Error(err)
 		return nil, err
 	}
 
 	metricTypes := []plugin.MetricType{}
 
 	if configItems["master"] != "" {
+		log.Info("Getting metric types for the Mesos master at ", configItems["master"])
 		master_mts, err := master.GetMetricsSnapshot(configItems["master"])
 		if err != nil {
+			log.Error(err)
 			return nil, err
 		}
 
 		for key, _ := range master_mts {
 			namespace := core.NewNamespace(pluginVendor, pluginName, "master").
 				AddStaticElements(strings.Split(key, "/")...)
+			log.Debug("Adding metric to catalog: ", namespace.String())
 			metricTypes = append(metricTypes, plugin.MetricType{Namespace_: namespace})
 		}
 
 		framework_mts, err := master.GetFrameworksMetricTypes()
 		if err != nil {
+			log.Error(err)
 			return nil, err
 		}
 
@@ -87,24 +93,29 @@ func (m *Mesos) GetMetricTypes(cfg plugin.ConfigType) ([]plugin.MetricType, erro
 			namespace := core.NewNamespace(pluginVendor, pluginName, "master").
 				AddDynamicElement("framework_id", "Framework ID").
 				AddStaticElements(strings.Split(key, "/")...)
+			log.Debug("Adding metric to catalog: ", namespace.String())
 			metricTypes = append(metricTypes, plugin.MetricType{Namespace_: namespace})
 		}
 	}
 
 	if configItems["agent"] != "" {
+		log.Info("Getting metric types for the Mesos agent at ", configItems["agent"])
 		agent_mts, err := agent.GetMetricsSnapshot(configItems["agent"])
 		if err != nil {
+			log.Error(err)
 			return nil, err
 		}
 
 		for key, _ := range agent_mts {
 			namespace := core.NewNamespace(pluginVendor, pluginName, "agent").
 				AddStaticElements(strings.Split(key, "/")...)
+			log.Debug("Adding metric to catalog: ", namespace.String())
 			metricTypes = append(metricTypes, plugin.MetricType{Namespace_: namespace})
 		}
 
 		agent_stats, err := agent.GetMonitoringStatisticsMetricTypes(configItems["agent"])
 		if err != nil {
+			log.Error(err)
 			return nil, err
 		}
 
@@ -113,7 +124,7 @@ func (m *Mesos) GetMetricTypes(cfg plugin.ConfigType) ([]plugin.MetricType, erro
 				AddDynamicElement("framework_id", "Framework ID").
 				AddDynamicElement("executor_id", "Executor ID").
 				AddStaticElements(strings.Split(key, "/")...)
-
+			log.Debug("Adding metric to catalog: ", namespace.String())
 			metricTypes = append(metricTypes, plugin.MetricType{Namespace_: namespace})
 		}
 	}
@@ -144,18 +155,22 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 	metrics := []plugin.MetricType{}
 
 	if configItems["master"] != "" && len(requestedMaster) > 0 {
+		log.Info("Collecting ", len(requestedMaster), " metrics from the master")
 		isLeader, err := master.IsLeader(configItems["master"])
 		if err != nil {
+			log.Error(err)
 			return nil, err
 		}
 		if isLeader {
 			snapshot, err := master.GetMetricsSnapshot(configItems["master"])
 			if err != nil {
+				log.Error(err)
 				return nil, err
 			}
 
 			frameworks, err := master.GetFrameworks(configItems["master"])
 			if err != nil {
+				log.Error(err)
 				return nil, err
 			}
 
@@ -170,6 +185,7 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 					for _, framework := range frameworks {
 						val := ns.GetValueByNamespace(framework, n)
 						if val == nil {
+							log.Warn("Attempted to collect metric ", requested.String(), " but it returned nil!")
 							continue
 						}
 						// substituting "framework" wildcard with particular framework id
@@ -180,10 +196,11 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 					}
 				} else {
 					n := requested.Strings()[3:]
-
 					val, ok := snapshot[strings.Join(n, "/")]
 					if !ok {
-						return nil, fmt.Errorf("error: requested metric %s not found", requested.String())
+						e := fmt.Errorf("error: requested metric %s not found", requested.String())
+						log.Error(e)
+						return nil, e
 					}
 					//TODO(kromar): is it possible to provide unit NewMetricType(ns, time, tags, unit, value)?
 					// I'm leaving empty string for now...
@@ -191,18 +208,21 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 				}
 			}
 		} else {
-			log.Info("Attempted CollectMetrics() on ", configItems["master"], "but it isn't the leader.")
+			log.Info("Attempted CollectMetrics() on ", configItems["master"], "but it isn't the leader. Skipping...")
 		}
 	}
 
 	if configItems["agent"] != "" && len(requestedAgent) > 0 {
+		log.Info("Collecting ", len(requestedAgent), " metrics from the agent")
 		snapshot, err := agent.GetMetricsSnapshot(configItems["agent"])
 		if err != nil {
+			log.Error(err)
 			return nil, err
 		}
 
 		executors, err := agent.GetMonitoringStatistics(configItems["agent"])
 		if err != nil {
+			log.Error(err)
 			return nil, err
 		}
 
@@ -216,8 +236,7 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 				for _, exec := range executors {
 					val := ns.GetValueByNamespace(exec.Statistics, n)
 					if val == nil {
-						// If the value is nil, ignore this particular metric for this
-						// invocation of CollectMetrics() and continue.
+						log.Warn("Attempted to collect metric ", requested.String(), " but it returned nil!")
 						continue
 					}
 					// substituting "framework" wildcard with particular framework id
@@ -233,7 +252,9 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 				n := requested.Strings()[3:]
 				val, ok := snapshot[strings.Join(n, "/")]
 				if !ok {
-					return nil, fmt.Errorf("error: requested metric %v not found", requested.String())
+					e := fmt.Errorf("error: requested metric %v not found", requested.String())
+					log.Error(e)
+					return nil, e
 				}
 
 				//TODO(kromar): units here also?
@@ -242,6 +263,7 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 		}
 	}
 
+	log.Debug("Collected a total of ", len(metrics), " metrics.")
 	return metrics, nil
 }
 
@@ -261,19 +283,19 @@ func getConfig(cfg interface{}) (map[string]string, error) {
 	agent_cfg, agent_err := config.GetConfigItem(cfg, "agent")
 
 	if master_err != nil && agent_err != nil {
-		return items, fmt.Errorf("error: no global config specified for 'master' and 'agent'.")
+		e := fmt.Errorf("error: no global config specified for 'master' and 'agent'.")
+		log.Error(e)
+		return items, e
 	}
 
-	// TODO(roger): since this plugin will typically only be deployed on a master *or* an agent,
-	// does it make sense to write these warning messages to the log?
 	items["master"], ok = master_cfg.(string)
 	if !ok {
-		log.Warn("no global config specified for 'master', only 'agent' metrics will be collected.")
+		log.Warn("No global config specified for 'master', only 'agent' metrics will be collected.")
 	}
 
 	items["agent"], ok = agent_cfg.(string)
 	if !ok {
-		log.Warn("no global config specified for 'agent', only 'master' metrics will be collected.")
+		log.Warn("No global config specified for 'agent', only 'master' metrics will be collected.")
 	}
 
 	return items, nil

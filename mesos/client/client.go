@@ -23,6 +23,8 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 // Define a client for collecting metrics from a Mesos master/agent over HTTP.
@@ -34,6 +36,7 @@ type Client struct {
 
 // Return a new instance of Client.
 func NewClient(host string, path string, timeout time.Duration) *Client {
+	log.Debug("Creating a new instance of the Mesos plugin HTTP client")
 	return &Client{
 		httpClient: &http.Client{Timeout: timeout},
 		host:       host,
@@ -50,23 +53,31 @@ func (c *Client) URL() string {
 
 // Fetch JSON from the API endpoint, unmarshal it, and return it to the provided 'target'.
 func (c *Client) Fetch(target interface{}) error {
+	log.Debug("Fetching data from ", c.URL())
 	resp, err := http.Get(c.URL())
 	if err != nil {
+		log.Error(err)
 		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("fetch error: %s", resp.Status)
+		e := fmt.Errorf("fetch error: %s", resp.Status)
+		log.Error(e)
+		return e
 	}
 
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("read error: %s: %v\n", c.URL(), err)
+		e := fmt.Errorf("read error: %s: %v\n", c.URL(), err)
+		log.Error(e)
+		return e
 	}
 
 	if err := json.Unmarshal(b, &target); err != nil {
-		return fmt.Errorf("unmarshal error: %s: %v\n", b, err)
+		e := fmt.Errorf("unmarshal error: %s: %v\n", b, err)
+		log.Error(e)
+		return e
 	}
 
 	return nil
