@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/client"
 	"github.com/intelsdi-x/snap-plugin-utilities/ns"
 )
@@ -45,8 +46,10 @@ type Resources struct {
 
 // Recursively traverse the Frameworks struct, building "/"-delimited strings that resemble snap metric types.
 func GetFrameworksMetricTypes() ([]string, error) {
+	log.Debug("Getting frameworks metric types from protobuf (mesos_pb2)")
 	namespaces := []string{}
 	if err := ns.FromCompositeObject(Framework{}, "", &namespaces); err != nil {
+		log.Error(err)
 		return nil, err
 	}
 	for i := 0; i < len(namespaces); i++ {
@@ -62,10 +65,12 @@ func GetFrameworksMetricTypes() ([]string, error) {
 // Get metrics from the '/master/frameworks' endpoint on the master. This endpoint returns JSON about the overall
 // state and resource utilization of the frameworks running on the cluster.
 func GetFrameworks(host string) ([]*Framework, error) {
+	log.Debug("Getting active frameworks resource utilization from master ", host)
 	var frameworks Frameworks
 
 	c := client.NewClient(host, "/master/frameworks", time.Duration(10))
 	if err := c.Fetch(&frameworks); err != nil {
+		log.Error(err)
 		return nil, err
 	}
 
@@ -80,10 +85,12 @@ func GetFrameworks(host string) ([]*Framework, error) {
 //   }
 //
 func GetMetricsSnapshot(host string) (map[string]float64, error) {
+	log.Debug("Getting metrics snapshot for host ", host)
 	data := map[string]float64{}
 
 	c := client.NewClient(host, "/metrics/snapshot", time.Duration(5))
 	if err := c.Fetch(&data); err != nil {
+		log.Error(err)
 		return nil, err
 	}
 
@@ -92,30 +99,40 @@ func GetMetricsSnapshot(host string) (map[string]float64, error) {
 
 // Determine if a given host is currently the leader, based on the location provided by the '/master/redirect' endpoint.
 func IsLeader(host string) (bool, error) {
+	log.Debug("Determining if host ", host, " is currently the leader")
 	req, err := http.NewRequest("HEAD", "http://"+host+"/master/redirect", nil)
 	if err != nil {
-		return false, fmt.Errorf("request error: %s", err)
+		e := fmt.Errorf("request error: %s", err)
+		log.Error(e)
+		return false, e
 	}
 
 	resp, err := http.DefaultTransport.RoundTrip(req)
 	if err != nil {
 		if resp.StatusCode == 307 {
-			// Do nothing, this is expected
+			log.Debug("Got expected response HTTP 307")
 		} else if resp.StatusCode != 307 {
-			return false, fmt.Errorf("error: expected HTTP 307, got %d", resp.StatusCode)
+			e := fmt.Errorf("error: expected HTTP 307, got %d", resp.StatusCode)
+			log.Error(e)
+			return false, e
 		} else {
-			return false, fmt.Errorf("client error: %s", err)
+			e := fmt.Errorf("client error: %s", err)
+			log.Error(e)
+			return false, e
 		}
 	}
 
 	location, err := resp.Location()
 	if err != nil {
+		log.Error(err)
 		return false, err
 	}
 
 	if strings.Contains(location.Host, host) {
+		log.Debug("Host ", host, " is currently the leader (matched ", location.Host, ")")
 		return true, nil
 	} else {
+		log.Debug("Host ", host, "is not currently the leader (did not match ", location.Host, ")")
 		return false, nil
 	}
 }

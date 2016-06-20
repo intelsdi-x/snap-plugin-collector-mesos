@@ -19,6 +19,7 @@
             "aliasColors": {},
             "bars": false,
             "datasource": "influx",
+            "decimals": 0,
             "editable": true,
             "error": false,
             "fill": 1,
@@ -90,7 +91,7 @@
                 "label": null,
                 "logBase": 1,
                 "max": null,
-                "min": null,
+                "min": 0,
                 "show": true
               },
               {
@@ -106,6 +107,7 @@
           {
             "aliasColors": {
               "intel/mesos/master/master/tasks_failed.count": "#890F02",
+              "intel/mesos/master/master/tasks_failed.derivative": "#BF1B00",
               "intel/mesos/master/master/tasks_lost.count": "#C15C17",
               "intel/mesos/master/master/tasks_staging.count": "#CCA300"
             },
@@ -181,6 +183,56 @@
                   ]
                 ],
                 "tags": []
+              },
+              {
+                "dsType": "influxdb",
+                "groupBy": [],
+                "measurement": "intel/mesos/master/master/tasks_failed",
+                "policy": "default",
+                "refId": "B",
+                "resultFormat": "time_series",
+                "select": [
+                  [
+                    {
+                      "params": [
+                        "value"
+                      ],
+                      "type": "field"
+                    },
+                    {
+                      "params": [
+                        "10s"
+                      ],
+                      "type": "derivative"
+                    }
+                  ]
+                ],
+                "tags": []
+              },
+              {
+                "dsType": "influxdb",
+                "groupBy": [],
+                "measurement": "intel/mesos/master/master/tasks_lost",
+                "policy": "default",
+                "refId": "D",
+                "resultFormat": "time_series",
+                "select": [
+                  [
+                    {
+                      "params": [
+                        "value"
+                      ],
+                      "type": "field"
+                    },
+                    {
+                      "params": [
+                        "10s"
+                      ],
+                      "type": "derivative"
+                    }
+                  ]
+                ],
+                "tags": []
               }
             ],
             "timeFrom": null,
@@ -201,7 +253,7 @@
                 "label": null,
                 "logBase": 1,
                 "max": null,
-                "min": null,
+                "min": 0,
                 "show": true
               },
               {
@@ -267,6 +319,10 @@
                         "value"
                       ],
                       "type": "field"
+                    },
+                    {
+                      "params": [],
+                      "type": "last"
                     }
                   ]
                 ],
@@ -296,7 +352,10 @@
         "height": "250px",
         "panels": [
           {
-            "aliasColors": {},
+            "aliasColors": {
+              "intel/mesos/master/master/cpus_total": "#EAB839",
+              "intel/mesos/master/master/cpus_used": "#7EB26D"
+            },
             "bars": false,
             "datasource": "influx",
             "editable": true,
@@ -403,7 +462,10 @@
             ]
           },
           {
-            "aliasColors": {},
+            "aliasColors": {
+              "intel/mesos/master/master/mem_total": "#EAB839",
+              "intel/mesos/master/master/mem_used": "#7EB26D"
+            },
             "bars": false,
             "datasource": "influx",
             "editable": true,
@@ -492,7 +554,7 @@
             },
             "yaxes": [
               {
-                "format": "short",
+                "format": "mbytes",
                 "label": null,
                 "logBase": 1,
                 "max": null,
@@ -510,7 +572,10 @@
             ]
           },
           {
-            "aliasColors": {},
+            "aliasColors": {
+              "intel/mesos/master/master/disk_total": "#EAB839",
+              "intel/mesos/master/master/disk_used": "#7EB26D"
+            },
             "bars": false,
             "datasource": "influx",
             "editable": true,
@@ -599,7 +664,7 @@
             },
             "yaxes": [
               {
-                "format": "short",
+                "format": "mbytes",
                 "label": null,
                 "logBase": 1,
                 "max": null,
@@ -664,27 +729,15 @@
             "targets": [
               {
                 "dsType": "influxdb",
-                "groupBy": [],
-                "measurement": "/intel\\/mesos\\/master\\/.*\\/resources\\/cpus/",
-                "policy": "default",
-                "refId": "A",
-                "resultFormat": "time_series",
-                "select": [
-                  [
-                    {
-                      "params": [
-                        "value"
-                      ],
-                      "type": "field"
-                    }
-                  ]
+                "groupBy": [
+                  {
+                    "params": [
+                      "framework_id"
+                    ],
+                    "type": "tag"
+                  }
                 ],
-                "tags": []
-              },
-              {
-                "dsType": "influxdb",
-                "groupBy": [],
-                "measurement": "/intel\\/mesos\\/master\\/.*\\/used_resources\\/cpus/",
+                "measurement": "intel/mesos/master/used_resources/cpus",
                 "policy": "default",
                 "refId": "B",
                 "resultFormat": "time_series",
@@ -719,7 +772,7 @@
                 "label": null,
                 "logBase": 1,
                 "max": null,
-                "min": null,
+                "min": 0,
                 "show": true
               },
               {
@@ -771,27 +824,15 @@
             "targets": [
               {
                 "dsType": "influxdb",
-                "groupBy": [],
-                "measurement": "/intel\\/mesos\\/master\\/.*\\/resources\\/mem/",
-                "policy": "default",
-                "refId": "A",
-                "resultFormat": "time_series",
-                "select": [
-                  [
-                    {
-                      "params": [
-                        "value"
-                      ],
-                      "type": "field"
-                    }
-                  ]
+                "groupBy": [
+                  {
+                    "params": [
+                      "framework_id"
+                    ],
+                    "type": "tag"
+                  }
                 ],
-                "tags": []
-              },
-              {
-                "dsType": "influxdb",
-                "groupBy": [],
-                "measurement": "/intel\\/mesos\\/master\\/.*\\/used_resources\\/mem/",
+                "measurement": "intel/mesos/master/used_resources/mem",
                 "policy": "default",
                 "refId": "B",
                 "resultFormat": "time_series",
@@ -822,11 +863,11 @@
             },
             "yaxes": [
               {
-                "format": "short",
+                "format": "mbytes",
                 "label": null,
                 "logBase": 1,
                 "max": null,
-                "min": null,
+                "min": 0,
                 "show": true
               },
               {
@@ -878,27 +919,15 @@
             "targets": [
               {
                 "dsType": "influxdb",
-                "groupBy": [],
-                "measurement": "/intel\\/mesos\\/master\\/.*\\/resources\\/disk/",
-                "policy": "default",
-                "refId": "A",
-                "resultFormat": "time_series",
-                "select": [
-                  [
-                    {
-                      "params": [
-                        "value"
-                      ],
-                      "type": "field"
-                    }
-                  ]
+                "groupBy": [
+                  {
+                    "params": [
+                      "framework_id"
+                    ],
+                    "type": "tag"
+                  }
                 ],
-                "tags": []
-              },
-              {
-                "dsType": "influxdb",
-                "groupBy": [],
-                "measurement": "/intel\\/mesos\\/master\\/.*\\/used_resources\\/disk/",
+                "measurement": "intel/mesos/master/used_resources/disk",
                 "policy": "default",
                 "refId": "B",
                 "resultFormat": "time_series",
@@ -929,11 +958,11 @@
             },
             "yaxes": [
               {
-                "format": "short",
+                "format": "mbytes",
                 "label": null,
                 "logBase": 1,
                 "max": null,
-                "min": null,
+                "min": 0,
                 "show": true
               },
               {
@@ -988,7 +1017,7 @@
             "points": false,
             "renderer": "flot",
             "seriesOverrides": [],
-            "span": 12,
+            "span": 4,
             "stack": false,
             "steppedLine": false,
             "targets": [
@@ -997,31 +1026,28 @@
                 "groupBy": [
                   {
                     "params": [
-                      "$interval"
+                      "executor_id"
                     ],
-                    "type": "time"
-                  },
-                  {
-                    "params": [
-                      "null"
-                    ],
-                    "type": "fill"
+                    "type": "tag"
                   }
                 ],
+                "measurement": "intel/mesos/agent/cpus_user_time_secs",
                 "policy": "default",
                 "refId": "A",
                 "resultFormat": "time_series",
                 "select": [
                   [
                     {
+                      "type": "field",
                       "params": [
                         "value"
-                      ],
-                      "type": "field"
+                      ]
                     },
                     {
-                      "params": [],
-                      "type": "mean"
+                      "type": "derivative",
+                      "params": [
+                        "10s"
+                      ]
                     }
                   ]
                 ],
@@ -1030,9 +1056,9 @@
             ],
             "timeFrom": null,
             "timeShift": null,
-            "title": "CPU Utilization By Container",
+            "title": "CPU Utilization (User Time) By Executor",
             "tooltip": {
-              "msResolution": false,
+              "msResolution": true,
               "shared": true,
               "value_type": "cumulative"
             },
@@ -1058,13 +1084,204 @@
                 "show": true
               }
             ]
+          },
+          {
+            "aliasColors": {},
+            "bars": false,
+            "datasource": "influx",
+            "editable": true,
+            "error": false,
+            "fill": 1,
+            "grid": {
+              "threshold1": null,
+              "threshold1Color": "rgba(216, 200, 27, 0.27)",
+              "threshold2": null,
+              "threshold2Color": "rgba(234, 112, 112, 0.22)"
+            },
+            "id": 12,
+            "isNew": true,
+            "legend": {
+              "avg": false,
+              "current": false,
+              "max": false,
+              "min": false,
+              "show": true,
+              "total": false,
+              "values": false
+            },
+            "lines": true,
+            "linewidth": 2,
+            "links": [],
+            "nullPointMode": "connected",
+            "percentage": false,
+            "pointradius": 5,
+            "points": false,
+            "renderer": "flot",
+            "seriesOverrides": [],
+            "span": 4,
+            "stack": false,
+            "steppedLine": false,
+            "targets": [
+              {
+                "dsType": "influxdb",
+                "groupBy": [
+                  {
+                    "params": [
+                      "executor_id"
+                    ],
+                    "type": "tag"
+                  }
+                ],
+                "measurement": "intel/mesos/agent/mem_total_bytes",
+                "policy": "default",
+                "refId": "A",
+                "resultFormat": "time_series",
+                "select": [
+                  [
+                    {
+                      "params": [
+                        "value"
+                      ],
+                      "type": "field"
+                    }
+                  ]
+                ],
+                "tags": []
+              }
+            ],
+            "timeFrom": null,
+            "timeShift": null,
+            "title": "Memory Utilization By Executor",
+            "tooltip": {
+              "msResolution": true,
+              "shared": true,
+              "value_type": "cumulative"
+            },
+            "type": "graph",
+            "xaxis": {
+              "show": true
+            },
+            "yaxes": [
+              {
+                "format": "bytes",
+                "label": null,
+                "logBase": 1,
+                "max": null,
+                "min": null,
+                "show": true
+              },
+              {
+                "format": "short",
+                "label": null,
+                "logBase": 1,
+                "max": null,
+                "min": null,
+                "show": true
+              }
+            ]
+          },
+          {
+            "aliasColors": {},
+            "bars": false,
+            "datasource": "influx",
+            "editable": true,
+            "error": false,
+            "fill": 1,
+            "grid": {
+              "threshold1": null,
+              "threshold1Color": "rgba(216, 200, 27, 0.27)",
+              "threshold2": null,
+              "threshold2Color": "rgba(234, 112, 112, 0.22)"
+            },
+            "id": 13,
+            "isNew": true,
+            "legend": {
+              "avg": false,
+              "current": false,
+              "max": false,
+              "min": false,
+              "show": true,
+              "total": false,
+              "values": false
+            },
+            "lines": true,
+            "linewidth": 2,
+            "links": [],
+            "nullPointMode": "connected",
+            "percentage": false,
+            "pointradius": 5,
+            "points": false,
+            "renderer": "flot",
+            "seriesOverrides": [],
+            "span": 4,
+            "stack": false,
+            "steppedLine": false,
+            "targets": [
+              {
+                "dsType": "influxdb",
+                "groupBy": [
+                  {
+                    "params": [
+                      "executor_id"
+                    ],
+                    "type": "tag"
+                  }
+                ],
+                "measurement": "intel/mesos/agent/disk_used_bytes",
+                "policy": "default",
+                "refId": "A",
+                "resultFormat": "time_series",
+                "select": [
+                  [
+                    {
+                      "params": [
+                        "value"
+                      ],
+                      "type": "field"
+                    }
+                  ]
+                ],
+                "tags": []
+              }
+            ],
+            "timeFrom": null,
+            "timeShift": null,
+            "title": "Disk Utilization By Executor",
+            "tooltip": {
+              "msResolution": true,
+              "shared": true,
+              "value_type": "cumulative"
+            },
+            "type": "graph",
+            "xaxis": {
+              "show": true
+            },
+            "yaxes": [
+              {
+                "format": "bytes",
+                "label": null,
+                "logBase": 1,
+                "max": null,
+                "min": null,
+                "show": true
+              },
+              {
+                "format": "short",
+                "label": null,
+                "logBase": 1,
+                "max": null,
+                "min": null,
+                "show": true
+              }
+            ]
           }
         ],
-        "title": "New row"
+        "showTitle": true,
+        "title": "Resource Utilization (By Executor)"
       }
     ],
     "time": {
-      "from": "now-5m",
+      "from": "now-15m",
       "to": "now"
     },
     "timepicker": {
@@ -1098,7 +1315,7 @@
     "annotations": {
       "list": []
     },
-    "refresh": false,
+    "refresh": "30s",
     "schemaVersion": 12,
     "version": 2,
     "links": []

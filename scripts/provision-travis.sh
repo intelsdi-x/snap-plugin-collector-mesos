@@ -73,12 +73,13 @@ function configure_mesos {
     # Agent
     # Note: there is a known bug in Mesos when using the 'cgroups/perf_event' isolator
     # on specific kernels and platforms. For more info, see MESOS-4705.
-    echo "mesos"                                      > /etc/mesos-slave/containerizers
-    echo "${IP_ADDRESS}"                              > /etc/mesos-slave/hostname
-    echo "${IP_ADDRESS}"                              > /etc/mesos-slave/ip
-    echo "cgroups/cpu,cgroups/mem,cgroups/perf_event" > /etc/mesos-slave/isolation
-    echo "cpu-clock,task-clock,context-switches"      > /etc/mesos-slave/perf_events
-    echo "/var/lib/mesos"                             > /etc/mesos-slave/work_dir
+    echo "1secs"                                                 > /etc/mesos-slave/container_disk_watch_interval
+    echo "mesos"                                                 > /etc/mesos-slave/containerizers
+    echo "${IP_ADDRESS}"                                         > /etc/mesos-slave/hostname
+    echo "${IP_ADDRESS}"                                         > /etc/mesos-slave/ip
+    echo "cgroups/cpu,cgroups/mem,cgroups/perf_event,posix/disk" > /etc/mesos-slave/isolation
+    echo "cpu-clock,task-clock,context-switches"                 > /etc/mesos-slave/perf_events
+    echo "/var/lib/mesos"                                        > /etc/mesos-slave/work_dir
     service mesos-slave restart
 
     cat << END

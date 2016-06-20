@@ -11,10 +11,10 @@
 # Mesos, Go, and Snap. Alternately, you may set one or more of these values
 # to 'latest' to unpin it.
 #
-MESOS_RELEASE    = '0.28.1-2.0.20.ubuntu1404'
+MESOS_RELEASE    = '0.28.2-2.0.27.ubuntu1404'
 MARATHON_RELEASE = '1.1.1-1.0.472.ubuntu1404'
 GOLANG_RELEASE   = '1.6.2'
-SNAP_RELEASE     = 'v0.13.0-beta'
+SNAP_RELEASE     = 'v0.14.0-beta'
 IP_ADDRESS       = '10.180.10.180'
 
 Vagrant.configure(2) do |config|
