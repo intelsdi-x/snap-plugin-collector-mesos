@@ -263,9 +263,12 @@ You should now see some basic metrics about your Mesos cluster:
 ![grafana-dashboard](assets/grafana-dashboard.png)
 
 ### Known Issues and Caveats
-  * Snap's metric catalog is populated only once, when the Mesos collector plugin is loaded. A configuration change on
-  the master or agent could alter the metrics reported by Mesos. Therefore, if you modify the configuration of a Mesos
-  master or agent, you should reload this Snap plugin at the same time.
+  * Currently, the address of the Mesos master and/or agent is provided via Snap's global configuration file. When this
+  plugin is loaded (using `snapctl`) it plugin will query a Mesos master and/or agent for its available metrics and use
+  the resulting JSON structure to build Snap's metrics catalog. However, a configuration change on the Mesos master or
+  agent could alter the metrics reported by Mesos (e.g., enabling the network isolator). Therefore, if you modify the
+  configuration of a Mesos master or agent and expect more (or fewer) metrics to be collected, you should reload this
+  Snap plugin at the same time.
   * Due to a bug in Mesos, the parsing logic for the `perf` command was incorrect on certain platforms and kernels. When
   the `cgroups/perf_event` isolator was enabled on an agent, the `perf` object would appear in the JSON returned by the
   agent's `/monitor/statistics` endpoint, but it would contain no data. This issue was resolved in Mesos 0.29.0, and was
