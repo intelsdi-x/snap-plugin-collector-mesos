@@ -1,6 +1,6 @@
 # Snap Collector Plugin — Apache Mesos
 
-[![Build Status](https://travis-ci.com/intelsdi-x/snap-plugin-collector-mesos.svg?token=mxqCYyjxtayP5XBp4JEu&branch=master)](https://travis-ci.com/intelsdi-x/snap-plugin-collector-mesos)
+[![Build Status](https://travis-ci.org/intelsdi-x/snap-plugin-collector-mesos.svg?branch=master)](https://travis-ci.org/intelsdi-x/snap-plugin-collector-mesos)
 
 This Snap plugin collects metrics from an [Apache Mesos][mesos-home] cluster.
 It gathers information about cluster resource allocation and utilization, as
