@@ -54,14 +54,16 @@ function _unit_test_with_coverage {
 }
 
 function _submit_to_coveralls {
-    # Only submit to Coveralls.io if we're running in Travis CI.
-    # We don't want this happening on dev machines!
+    # Only submit to Coveralls.io if we're running in Travis CI. We don't want
+    # this happening on dev machines! Note that the Coveralls repo token is
+    # available via the $COVERALLS_REPO_TOKEN environment variable, which is
+    # configured for the project in the Travis CI web interface.
     if [[ $TRAVIS == "true" ]]; then
         go get github.com/mattn/goveralls
 
         for attempt in {1..${COVERALLS_MAX_ATTEMPTS}}; do
             echo "Posting test coverage to Coveralls, attempt ${attempt} of ${COVERALLS_MAX_ATTEMPTS}"
-            goveralls -v -coverprofile=profile.cov -service=travis-ci -repotoken ${COVERALLS_TOKEN} && break
+            goveralls -v -coverprofile=profile.cov -service=travis-ci -repotoken ${COVERALLS_REPO_TOKEN} && break
         done
     else
         echo "Not running in Travis CI, not posting test coverage to Coveralls!"
@@ -92,7 +94,7 @@ function main {
         _goimports
         _govet
         _unit_test_with_coverage
-        #_submit_to_coveralls
+        _submit_to_coveralls
     elif [[ $TEST_SUITE == "integration" ]]; then
         _integration_test
     else
