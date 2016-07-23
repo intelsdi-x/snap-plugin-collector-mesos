@@ -1,6 +1,7 @@
 # Snap Collector Plugin — Apache Mesos
 
 [![Build Status](https://travis-ci.org/intelsdi-x/snap-plugin-collector-mesos.svg?branch=master)](https://travis-ci.org/intelsdi-x/snap-plugin-collector-mesos)
+[![Coverage Status](https://coveralls.io/repos/github/intelsdi-x/snap-plugin-collector-mesos/badge.svg?branch=master)](https://coveralls.io/github/intelsdi-x/snap-plugin-collector-mesos?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/intelsdi-x/snap-plugin-collector-mesos)](https://goreportcard.com/report/github.com/intelsdi-x/snap-plugin-collector-mesos)
 
 This Snap plugin collects metrics from an [Apache Mesos][mesos-home] cluster.
