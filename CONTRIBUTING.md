@@ -1,88 +1,46 @@
-# Snap Collector Plugin - Apache Mesos
+# snap plugin collector mesos
 
-  1. [Contributing Code](#contributing-code)
-    * [Vagrant development environment](#vagrant-development-environment)
-  2. [Contributing Examples](#contributing-examples)
-  3. [Contributing Elsewhere](#contributing-elsewhere)
-  4. [Thank You](#thank-you)
+1. [Contributing Code](#contributing-code)
+2. [Contributing Examples](#contributing-examples)
+3. [Contribute Elsewhere](#contribute-elsewhere)
+4. [Thank You](#thank-you)
 
-This repository has dedicated developers from Intel working on updates. The most helpful way to contribute is by
-reporting your experience through issues. Issues may not be updated while we review internally, but they're still
-incredibly appreciated.
+This repository has dedicated developers from Intel working on updates. The most helpful way to contribute is by reporting your experience through issues. Issues may not be updated while we review internally, but they're still incredibly appreciated.
 
 ## Contributing Code
-**_IMPORTANT_**: We encourage contributions to the project from the community. We ask that you keep the following
-guidelines in mind when planning your contribution.
+**_IMPORTANT_**: We encourage contributions to the project from the community. We ask that you keep the following guidelines in mind when planning your contribution.
 
-  * Whether your contribution is for a bug fix or a feature request, **create an [Issue][create-issue]** and let us know
-   what you are thinking.
-  * **For bugs**, if you have already found a fix, feel free to submit a Pull Request referencing the Issue you created.
-  * **For feature requests**, we want to improve upon the library incrementally, which means small changes at a time. In
-   order ensure your PR can be reviewed in a timely manner, please keep PRs small, e.g. <10 files and <500 lines
-   changed. If you think this is unrealistic, then mention that within the issue and we can discuss it.
+* Whether your contribution is for a bug fix or a feature request, **create an [Issue](https://github.com/intelsdi-x/snap-plugin-collector-mesos/issues)** and let us know what you are thinking.
+* **For bugs**, if you have already found a fix, feel free to submit a Pull Request referencing the Issue you created. Include the `Fixes #` syntax to link it to the issue you're addressing.
+* **For feature requests**, we want to improve upon the library incrementally which means small changes at a time. In order to ensure your PR can be reviewed in a timely manner, please keep PRs small, e.g. <10 files and <500 lines changed. If you think this is unrealistic, then mention that within the issue and we can discuss it.
 
 Once you're ready to contribute code back to this repo, start with these steps:
 
-  * Fork the appropriate sub-projects that are affected by your change
-  * Clone the fork to `$GOPATH/src/github.com/intelsdi-x/`
+* Fork the appropriate sub-projects that are affected by your change.
+* Clone the fork to `$GOPATH/src/github.com/intelsdi-x/`:
 
     ```
-    $ git clone https://github.com/<yourGithubID>/<project>.git
+$ git clone https://github.com/<yourGithubID>/<project>.git
     ```
-
-  * Create a topic branch for your change and checkout that branch
+* Create a topic branch for your change and checkout that branch:
 
     ```
     $ git checkout -b some-topic-branch
     ```
+* Make your changes and run the test suite if one is provided.
+* Commit your changes and push them to your fork.
+* Open a pull request for the appropriate project.
+* Contributors will review your pull request, suggest changes, and merge it when it’s ready and/or offer feedback.
 
-  * Make your changes and run the test suite if one is provided (see below)
-  * Commit your changes and push them to your fork
-  * Open a pull request for the appropriate project
-  * Contributors will review your pull request, suggest changes, and merge it when it’s ready and/or offer feedback
-  * To report a bug or issue, please open a new issue against this repository
-
-If you have questions feel free to contact the [snap maintainers][snap-maintainers].
-
-### Vagrant development environment
-Included in this repo is a Vagrant development environment that provisions a single-node Mesos cluster for developing
-and testing this plugin. To get started, you'll need to have:
-
-  * VirtualBox: <https://www.virtualbox.org/wiki/Downloads>
-  * Vagrant: <https://www.vagrantup.com/downloads.html>
-
-Next, assuming that your current working directory is the root of this Git repository, simply run the following command:
-
-```
-$ vagrant up
-```
-
-The provisioning script will install Mesos, ZooKeeper, Go, and Snap. You can then connect to Mesos at the following
-URLs:
-
-  * Mesos master: <http://10.180.10.180:5050>
-  * Mesos agent: <http://10.180.10.180:5051>
-  * InfluxDB: <http://10.180.10.180:8083>
-  * Grafana: <http://10.180.10.180:3000>
-
-In order to launch a task on the cluster that you can then observe with Snap, try running the following command in a
-separate terminal window / SSH session:
-
-```
-$ mesos execute --master="$(mesos resolve zk://10.180.10.180:2181/mesos)" \
-    --name="PythonHttpServer" --command="python -m SimpleHTTPServer 9000"
-```
+If you have questions feel free to contact the [maintainers](https://github.com/intelsdi-x/snap/blob/master/README.md#maintainers) by tagging them: @intelsdi-x/plugin-maintainers.
 
 ## Contributing Examples
-The most immediately helpful way you can benefit this project is by cloning the repository, adding some further examples
-and submitting a pull request.
+The most immediately helpful way you can benefit this project is by cloning the repository, adding some further examples and submitting a pull request.
 
-Have you written a blog post about how you use [snap](http://github.com/intelsdi-x/snap) and/or this plugin? Send it to
-us!
+Have you written a blog post about how you use [Snap](http://github.com/intelsdi-x/snap) and/or this plugin? Send it to us [on Slack](http://slack.snap-telemetry.io)!
 
-## Contributing Elsewhere
-This repository is one of **many** plugins in **snap**, a powerful telemetry framework. See the full project at
-<http://github.com/intelsdi-x/snap>.
+## Contribute Elsewhere
+This repository is one of **many** plugins in **Snap**, a powerful telemetry framework. See the full project at http://snap-telemetry.io
 
 ## Reporting Security Issues
 
@@ -94,7 +52,3 @@ deepest gratitude for your assistance in making Snap a more secure product.
 
 ## Thank You
 And **thank you!** Your contribution, through code and participation, is incredibly important to us.
-
-
-[create-issue]: https://github.com/intelsdi-x/snap-plugin-collector-mesos/issues
-[snap-maintainers]: https://github.com/intelsdi-x/snap/blob/master/README.md#maintainers

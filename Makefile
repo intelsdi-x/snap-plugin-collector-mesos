@@ -1,23 +1,37 @@
+# File managed by pluginsync
+# http://www.apache.org/licenses/LICENSE-2.0.txt
+#
+#
+# Copyright 2015 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 default:
-	$(MAKE) clean
 	$(MAKE) deps
 	$(MAKE) all
-clean:
-	-rm -rf build/
-	-rm -rf vendor/
-	-rm -rf Godeps/_workspace
-	-rm -rf tmp/
-	-rm -rf profile.cov
 deps:
-	bash -c "godep restore"
+	bash -c "./scripts/deps.sh"
 test:
-	bash -c "./scripts/test.sh $(TEST)"
+	bash -c "./scripts/test.sh $(TEST_TYPE)"
+test-legacy:
+	bash -c "./scripts/test.sh legacy"
+test-small:
+	bash -c "./scripts/test.sh small"
+test-medium:
+	bash -c "./scripts/test.sh medium"
+test-large:
+	bash -c "./scripts/test.sh large"
 check:
 	$(MAKE) test
 all:
-	bash -c "./scripts/build.sh $(PWD)"
-protobuf:
-	curl -L -o mesos_pb2.proto https://raw.githubusercontent.com/apache/mesos/0.28.1/include/mesos/mesos.proto
-	protoc --go_out=import_path=mesos_pb2:mesos/mesos_pb2 mesos_pb2.proto
-	mv mesos/mesos_pb2/mesos_pb2.pb.go mesos/mesos_pb2/mesos_pb2.go
-	rm -f mesos_pb2.proto
+	bash -c "./scripts/build.sh $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))"

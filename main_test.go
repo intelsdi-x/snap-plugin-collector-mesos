@@ -1,4 +1,4 @@
-// +build unit
+// +build small
 
 /*
 Copyright 2016 Intel Corporation
