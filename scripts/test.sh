@@ -5,7 +5,6 @@
 #   - go vet        (https://golang.org/cmd/vet)
 #   - test coverage (https://blog.golang.org/cover)
 
-COVERALLS_TOKEN=t47LG6BQsfLwb9WxB56hXUezvwpED6D11
 COVERALLS_MAX_ATTEMPTS=5
 TEST_DIRS="main.go mesos/"
 PKG_DIRS=". ./mesos/..."
@@ -58,7 +57,7 @@ function _submit_to_coveralls {
     # this happening on dev machines! Note that the Coveralls repo token is
     # available via the $COVERALLS_REPO_TOKEN environment variable, which is
     # configured for the project in the Travis CI web interface.
-    if [[ $TRAVIS == "true" ]]; then
+    if [[ $TRAVIS == "true" && $COVERALLS_REPO_TOKEN != "" ]]; then
         go get github.com/mattn/goveralls
 
         for attempt in {1..${COVERALLS_MAX_ATTEMPTS}}; do
@@ -66,7 +65,7 @@ function _submit_to_coveralls {
             goveralls -v -coverprofile=profile.cov -service=travis-ci -repotoken ${COVERALLS_REPO_TOKEN} && break
         done
     else
-        echo "Not running in Travis CI, not posting test coverage to Coveralls!"
+        echo "Not running in Travis CI (environment variables unset), not posting test coverage to Coveralls!"
     fi
 }
 
