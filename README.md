@@ -24,13 +24,10 @@ well as metrics about running containers.
 
 ## Getting Started
 ### System Requirements
-At a minimum, you'll need:
-  * [Apache Mesos][mesos-home] (currently tested against 0.26.x, 0.27.x, and 0.28.x)
-  * [Golang 1.5+][golang-dl] (only needed for building the plugin)
-  * [Snap][snap-github] v0.14+
-  * Linux (amd64)
-  * InfluxDB and the [InfluxDB publisher for Snap][snap-influxdb] v13+ (optional)
-  * Mac OS X (x86_64) (for development/testing only)
+| Plugin Version | Supported Snap Version(s) | Supported [Mesos][mesos-home] Version(s) | Supported InfluxDB Publisher Version(s) |
+|----------------|---------------------------|------------------------------------------|-----------------------------------------|
+| v1             | v0.14-beta                | 0.26.x, 0.27.x, 0.28.x                   | v13+                                    |
+| v2             | v0.18                     | 1.0.x                                    | v15+                                    |
 
 To enable metrics collection from the `perf_event` cgroups subsystem, you'll also need a kernel that supports it,
 and the userland tools that enable you to run the `perf` command. On Ubuntu, this includes the following packages:
