@@ -25,23 +25,14 @@
         "/intel/mesos/agent/*/*/cpus_user_time_secs": {},
         "/intel/mesos/agent/*/*/mem_total_bytes": {}
       },
-      "config": {},
-      "process": [
+      "publish": [
         {
-          "plugin_name": "passthru",
-          "process": null,
-          "publish": [
-            {
-              "plugin_name": "file",
-              "config": {
-                "file": "/tmp/snap-published-metrics_mesos-all"
-              }
-            }
-          ],
-          "config": null
+          "plugin_name": "file",
+          "config": {
+            "file": "/tmp/snap-published-metrics_mesos-all"
+          }
         }
-      ],
-      "publish": null
+      ]
     }
   }
 }

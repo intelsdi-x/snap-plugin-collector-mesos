@@ -188,31 +188,31 @@ to get started with Vagrant, please see [CONTRIBUTING.md](CONTRIBUTING.md).*
 #### Publishing metrics to a file
 To start collecting Mesos metrics and publish them to a file, you'll need to perform the following steps.
 
-
-Start the Snap daemon in the background:
+Set up the [Snap framework](https://github.com/intelsdi-x/snap/blob/master/README.md#getting-started),
+run `snapd` (in this case with logging set to 1, trust disabled and global configuration saved in snap-config-example.json):
 
 ```
 $ snapd --plugin-trust 0 --log-level 1 --config examples/configs/snap-config-example.json \
     > /tmp/snap.log 2>&1 &
 ```
 
-Assuming you're in the working directory for this plugin, load the Mesos collector plugin:
-
+Download and load [snap-plugin-publisher-file](https://github.com/intelsdi-x/snap-plugin-publisher-file), for example:
 ```
-$ snapctl plugin load build/rootfs/snap-plugin-collector-mesos
+$ wget https://github.com/intelsdi-x/snap-plugin-publisher-file/releases/download/2/snap-plugin-publisher-file_linux_x86_64
+$ snapctl plugin load snap-plugin-publisher-file_linux_x86_64
+```
+
+Build or download mesos plugin according to the [instruction](#installation) and go to directory with plugin binary file.
+
+Load mesos collector plugin:
+```
+$ snapctl plugin load snap-plugin-collector-mesos
 ```
 
 Get the available metrics for your system:
 
 ```
 $ snapctl metric list
-```
-
-Load the `passthru` processor plugin, and the `file` publisher plugin:
-
-```
-$ snapctl plugin load ${SNAP_PATH}/plugin/snap-processor-passthru
-$ snapctl plugin load ${SNAP_PATH}/plugin/snap-publisher-file
 ```
 
 Create a new Snap task:
@@ -229,7 +229,7 @@ $ snapctl task stop <task ID>
 
 #### Visualizing cluster telemetry with Grafana and InfluxDB
 To help you get up and running quickly, this repo also includes a more extensive example of how to publish Mesos cluster
-metrics to InfluxDB and visualize this data with Grafana. We assume that you already have a working InfluxDB and
+metrics to InfluxDB (using [snap-plugin-publisher-influxdb](https://github.com/intelsdi-x/snap-plugin-publisher-influxdb)) and visualize this data with Grafana. We assume that you already have a working InfluxDB and
 Grafana installation, and that you have all the necessary Snap plugins and configuration loaded.
 
 *Note: you'll need to modify the values for the `host`, `user`, and `password` options in the example tasks.*
