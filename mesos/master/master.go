@@ -36,6 +36,8 @@ type Framework struct {
 	OfferedResources *Resources `json:"offered_resources"`
 	Resources        *Resources `json:"resources"`
 	UsedResources    *Resources `json:"used_resources"`
+	Name             string     `json:"name"`
+	Active           bool       `json:"active"`
 }
 
 type Resources struct {

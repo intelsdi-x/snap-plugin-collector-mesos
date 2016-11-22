@@ -34,7 +34,7 @@ import (
 const (
 	pluginVendor  = "intel"
 	pluginName    = "mesos"
-	pluginVersion = 1
+	pluginVersion = 2
 	pluginType    = plugin.CollectorPluginType
 )
 
@@ -77,8 +77,23 @@ func (m *Mesos) GetMetricTypes(cfg plugin.ConfigType) ([]plugin.MetricType, erro
 		}
 
 		for key, _ := range master_mts {
-			namespace := core.NewNamespace(pluginVendor, pluginName, "master").
-				AddStaticElements(strings.Split(key, "/")...)
+			namespace := core.NewNamespace(pluginVendor, pluginName, "master")
+			if strings.HasPrefix(key, "allocator/mesos/offer_filters/roles/") {
+				namespace = namespace.
+					AddStaticElements(strings.Split(key, "/")[:3]...).
+					AddDynamicElement("role_name", "Role name").
+					AddStaticElements(strings.Split(key, "/")[5:]...)
+			} else if strings.HasPrefix(key, "allocator/mesos/quota/roles/") {
+				namespace = namespace.
+					AddStaticElements(strings.Split(key, "/")[:3]...).
+					AddDynamicElement("role_name", "Role name").
+					AddStaticElement(strings.Split(key, "/")[5]).
+					AddDynamicElement("resource_name", "Resource name").
+					AddStaticElements(strings.Split(key, "/")[7:]...)
+			} else {
+				namespace = namespace.
+					AddStaticElements(strings.Split(key, "/")...)
+			}
 			log.Debug("Adding metric to catalog: ", namespace.String())
 			metricTypes = append(metricTypes, plugin.MetricType{Namespace_: namespace})
 		}
@@ -91,6 +106,7 @@ func (m *Mesos) GetMetricTypes(cfg plugin.ConfigType) ([]plugin.MetricType, erro
 
 		for _, key := range framework_mts {
 			namespace := core.NewNamespace(pluginVendor, pluginName, "master").
+				AddStaticElement("framework").
 				AddDynamicElement("framework_id", "Framework ID").
 				AddStaticElements(strings.Split(key, "/")...)
 			log.Debug("Adding metric to catalog: ", namespace.String())
@@ -121,6 +137,7 @@ func (m *Mesos) GetMetricTypes(cfg plugin.ConfigType) ([]plugin.MetricType, erro
 
 		for _, key := range agent_stats {
 			namespace := core.NewNamespace(pluginVendor, pluginName, "agent").
+				AddStaticElement("task").
 				AddDynamicElement("framework_id", "Framework ID").
 				AddDynamicElement("executor_id", "Executor ID").
 				AddStaticElements(strings.Split(key, "/")...)
@@ -179,7 +196,7 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 			for _, requested := range requestedMaster {
 				isDynamic, _ := requested.IsDynamic()
 				if isDynamic {
-					n := requested.Strings()[4:]
+					n := requested.Strings()[5:]
 
 					// Iterate through the array of frameworks returned by GetFrameworks()
 					for _, framework := range frameworks {
@@ -188,10 +205,12 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 							log.Warn("Attempted to collect metric ", requested.String(), " but it returned nil!")
 							continue
 						}
+						//clone ns
+						cns := core.Namespace(append([]core.NamespaceElement{}, requested...))
 						// substituting "framework" wildcard with particular framework id
-						requested[3].Value = framework.ID
+						cns[4].Value = framework.ID
 						// TODO(roger): units
-						metrics = append(metrics, *plugin.NewMetricType(requested, now, tags, "", val))
+						metrics = append(metrics, *plugin.NewMetricType(cns, now, tags, "", val))
 
 					}
 				} else {
@@ -229,7 +248,7 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 		tags := map[string]string{"source": configItems["agent"]}
 
 		for _, requested := range requestedAgent {
-			n := requested.Strings()[5:]
+			n := requested.Strings()[6:]
 			isDynamic, _ := requested.IsDynamic()
 			if isDynamic {
 				// Iterate through the array of executors returned by GetMonitoringStatistics()
@@ -239,12 +258,14 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 						log.Warn("Attempted to collect metric ", requested.String(), " but it returned nil!")
 						continue
 					}
+					//clone ns
+					cns := core.Namespace(append([]core.NamespaceElement{}, requested...))
 					// substituting "framework" wildcard with particular framework id
-					requested[3].Value = exec.Framework
+					cns[4].Value = exec.Framework
 					// substituting "executor" wildcard with particular executor id
-					requested[4].Value = exec.ID
+					cns[5].Value = exec.ID
 					// TODO(roger): units
-					metrics = append(metrics, *plugin.NewMetricType(requested, now, tags, "", val))
+					metrics = append(metrics, *plugin.NewMetricType(cns, now, tags, "", val))
 
 				}
 			} else {
