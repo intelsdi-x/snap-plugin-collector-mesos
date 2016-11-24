@@ -112,8 +112,8 @@ This plugin collects hundreds of metrics from Mesos masters and agents. As such,
 here, so instead we've provided a quick overview. To get a complete list of available metrics, you can run the
 following commands:
 ```
-$ snapctl plugin load snap-plugin-collector-mesos
-$ snapctl metric list
+$ snaptel plugin load snap-plugin-collector-mesos
+$ snaptel metric list
 ```
 
 #### Mesos framework metrics
@@ -189,42 +189,42 @@ to get started with Vagrant, please see [CONTRIBUTING.md](CONTRIBUTING.md).*
 To start collecting Mesos metrics and publish them to a file, you'll need to perform the following steps.
 
 Set up the [Snap framework](https://github.com/intelsdi-x/snap/blob/master/README.md#getting-started),
-run `snapd` (in this case with logging set to 1, trust disabled and global configuration saved in snap-config-example.json):
+run `snapteld` (in this case with logging set to 1, trust disabled and global configuration saved in snap-config-example.json):
 
 ```
-$ snapd --plugin-trust 0 --log-level 1 --config examples/configs/snap-config-example.json \
+$ snapteld --plugin-trust 0 --log-level 1 --config examples/configs/snap-config-example.json \
     > /tmp/snap.log 2>&1 &
 ```
 
 Download and load [snap-plugin-publisher-file](https://github.com/intelsdi-x/snap-plugin-publisher-file), for example:
 ```
 $ wget https://github.com/intelsdi-x/snap-plugin-publisher-file/releases/download/2/snap-plugin-publisher-file_linux_x86_64
-$ snapctl plugin load snap-plugin-publisher-file_linux_x86_64
+$ snaptel plugin load snap-plugin-publisher-file_linux_x86_64
 ```
 
 Build or download mesos plugin according to the [instruction](#installation) and go to directory with plugin binary file.
 
 Load mesos collector plugin:
 ```
-$ snapctl plugin load snap-plugin-collector-mesos
+$ snaptel plugin load snap-plugin-collector-mesos
 ```
 
 Get the available metrics for your system:
 
 ```
-$ snapctl metric list
+$ snaptel metric list
 ```
 
 Create a new Snap task:
 
 ```
-$ snapctl task create -t examples/tasks/mesos-all-file.json
+$ snaptel task create -t examples/tasks/mesos-all-file.json
 ```
 
 Stop the task:
 
 ```
-$ snapctl task stop <task ID>
+$ snaptel task stop <task ID>
 ```
 
 #### Visualizing cluster telemetry with Grafana and InfluxDB
@@ -237,13 +237,13 @@ Grafana installation, and that you have all the necessary Snap plugins and confi
 On the Mesos master(s), run the following command:
 
 ```
-$ snapctl task create -t examples/tasks/mesos-master-influxdb.json
+$ snaptel task create -t examples/tasks/mesos-master-influxdb.json
 ```
 
 On the Mesos agent(s), run the following command:
 
 ```
-$ snapctl task create -t examples/tasks/mesos-agent-influxdb.json
+$ snaptel task create -t examples/tasks/mesos-agent-influxdb.json
 ```
 
 Finally, load the example Grafana dashboard. The following commands assume that Grafana is running at
@@ -267,7 +267,7 @@ You should now see some basic metrics about your Mesos cluster:
 
 ### Known Issues and Caveats
   * Currently, the address of the Mesos master and/or agent is provided via Snap's global configuration file. When this
-  plugin is loaded (using `snapctl`) it plugin will query a Mesos master and/or agent for its available metrics and use
+  plugin is loaded (using `snaptel`) it plugin will query a Mesos master and/or agent for its available metrics and use
   the resulting JSON structure to build Snap's metrics catalog. However, a configuration change on the Mesos master or
   agent could alter the metrics reported by Mesos (e.g., enabling the network isolator). Therefore, if you modify the
   configuration of a Mesos master or agent and expect more (or fewer) metrics to be collected, you should reload this
