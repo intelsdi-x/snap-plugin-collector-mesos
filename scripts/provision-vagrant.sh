@@ -197,7 +197,7 @@ The Snap plugins have also been installed to ${SNAP_PATH}/plugin.
 
 When you're ready, you can start the snap daemon by running:
 
-  snapd --plugin-trust 0 --log-level 1 --auto-discover \\
+  snapteld --plugin-trust 0 --log-level 1 --auto-discover \\
     "${SNAP_PATH}/plugin" >> /var/log/snap.log 2>&1 &
 
 or something similar.
