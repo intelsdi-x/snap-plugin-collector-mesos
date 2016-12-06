@@ -1,4 +1,5 @@
-pluginsync_config: '0.1.6'
+# File managed by pluginsync
+pluginsync_config: '0.1.9'
 managed_files:
 - .github
 - .github/ISSUE_TEMPLATE.md
@@ -8,10 +9,8 @@ managed_files:
 - .travis.yml
 - CONTRIBUTING.md
 - LICENSE
-- Makefile
 - scripts
 - scripts/build.sh
 - scripts/common.sh
 - scripts/deps.sh
 - scripts/pre_deploy.sh
-- scripts/test.sh

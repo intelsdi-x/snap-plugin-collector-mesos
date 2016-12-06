@@ -4,7 +4,7 @@ dist: trusty
 language: go
 go:
 - 1.6.3
-- 1.7.1
+- 1.7.3
 env:
   global:
   - ORG_PATH=/home/travis/gopath/src/github.com/intelsdi-x
@@ -12,8 +12,6 @@ env:
   matrix:
   - TEST_TYPE=small
   - TEST_TYPE=medium MESOS_RELEASE=0.28.1-2.0.20.ubuntu1404
-  - TEST_TYPE=medium MESOS_RELEASE=0.27.2-2.0.15.ubuntu1404
-  - TEST_TYPE=medium MESOS_RELEASE=0.26.1-2.0.19.ubuntu1404
   - TEST_TYPE=build
 matrix:
   exclude:
@@ -46,7 +44,7 @@ deploy:
   on:
     repo: intelsdi-x/snap-plugin-collector-mesos
     branch: master
-    condition: $TEST_TYPE = "build" && $TRAVIS_GO_VERSION = "1.7.1"
+    condition: $TEST_TYPE = "build" && $TRAVIS_GO_VERSION = "1.7.3"
 - provider: s3
   access_key_id: AKIAINMB43VSSPFZISAA
   secret_access_key:
@@ -60,7 +58,7 @@ deploy:
   on:
     repo: intelsdi-x/snap-plugin-collector-mesos
     tags: true
-    condition: $TEST_TYPE = "build" && $TRAVIS_GO_VERSION = "1.7.1"
+    condition: $TEST_TYPE = "build" && $TRAVIS_GO_VERSION = "1.7.3"
 - provider: releases
   api_key:
     secure: nkqx/GycwAJRKk5qKVENDuHPTYdQ6rsAzFEXSeHLxg7QuxJcWfwexbL5oJHkNnuj0Qg3udLRuEUkLrS1eMIIQUhjVeVliN6m+wg2rzn8PGgV57NX4HMA3iLBHZzf1lbuD5XsAsFVM2xvOycjCwhz8sncedhcE06O23Lwc8++uaXIRjiajYAwghlVA3i8DEwyhc1KI5bjOKmr6aWsYhvQkXrGw/5Wqk6hJkTELxmO9n7l6qEQfaKTTgdM8L94jE0DdQQmIGPhsq7iKw+5dfBWMsM3krVniBk56xOTKXPG4tdN0cgAtrne59LKL84ySj6IMOHZQWBXipsZwdljf02Njbz+cong3AlkEOKChK7hRbcDmoGpyOnScPKOAk8dQOvGiWRe9lXK2VDhzPZA7imBm2Z1kiORtpBGxtOD8HC41snr7gejYIGwWbpU0tLMImoS85pZuccRNJeZM7b+BHAUMIpXPKDh5F/Zv1t6B5ZgYmF/IQmOyz9DTNKwWZ8FjeX/ASZN3/Ty3bFxJCQ5pAtVg1ZcLt9EIcLoWKjjkvuc3GEwOdBRzcoDC7fK5hP+uw4o/Qoi7zq1TO/zKH84pSc8K1m3ORiV2sMGEb5ojVakJwXak9LZF8UHh5HeupF5xE4CEyZVZ2/zLDTMoBXv+uAEvo6DwGw8BnxX8yLX+zZeLGU=
@@ -70,4 +68,4 @@ deploy:
   on:
     repo: intelsdi-x/snap-plugin-collector-mesos
     tags: true
-    condition: $TEST_TYPE = "build" && $TRAVIS_GO_VERSION = "1.7.1"
+    condition: $TEST_TYPE = "build" && $TRAVIS_GO_VERSION = "1.7.3"

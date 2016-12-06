@@ -1,100 +1,116 @@
-#!/bin/bash
-# File managed by pluginsync
+#!/bin/bash -e
+# The script does automatic checking on a Go package and its sub-packages, including:
+#   - gofmt         (https://golang.org/cmd/gofmt)
+#   - goimports     (https://godoc.org/cmd/goimports)
+#   - go vet        (https://golang.org/cmd/vet)
+#   - test coverage (https://blog.golang.org/cover)
 
-# http://www.apache.org/licenses/LICENSE-2.0.txt
-#
-#
-# Copyright 2016 Intel Corporation
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+COVERALLS_MAX_ATTEMPTS=5
+TEST_DIRS="main.go mesos/"
+PKG_DIRS=". ./mesos/..."
+IGNORE_PKGS="mesos_pb2"
 
-# Support travis.ci environment matrix:
-TEST_TYPE="${TEST_TYPE:-$1}"
-UNIT_TEST="${UNIT_TEST:-"gofmt goimports go_vet go_test go_cover"}"
-TEST_K8S="${TEST_K8S:-0}"
-
-set -e
-set -u
-set -o pipefail
-
-__dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-__proj_dir="$(dirname "$__dir")"
-
-# shellcheck source=scripts/common.sh
-. "${__dir}/common.sh"
-
-_debug "script directory ${__dir}"
-_debug "project directory ${__proj_dir}"
-
-[[ "$TEST_TYPE" =~ ^(small|medium|large|legacy|build)$ ]] || _error "invalid TEST_TYPE (value must be 'small', 'medium', 'large', 'legacy', or 'build' recieved:${TEST_TYPE}"
-
-_gofmt() {
-  test -z "$(gofmt -l -d $(find . -type f -name '*.go' -not -path "./vendor/*") | tee /dev/stderr)"
+function _gofmt {
+    echo "Running 'gofmt'"
+    test -z "$(gofmt -l -d $TEST_DIRS | tee /dev/stderr)"
 }
 
-test_unit() {
-  # The script does automatic checking on a Go package and its sub-packages, including:
-  # 1. gofmt         (http://golang.org/cmd/gofmt/)
-  # 2. goimports     (https://github.com/bradfitz/goimports)
-  # 3. golint        (https://github.com/golang/lint)
-  # 4. go vet        (http://golang.org/cmd/vet)
-  # 5. race detector (http://blog.golang.org/race-detector)
-  # 6. go test
-  # 7. test coverage (http://blog.golang.org/cover)
-  local go_tests
-  go_tests=(gofmt goimports golint go_vet go_race go_test go_cover)
-
-  _debug "available unit tests: ${go_tests[*]}"
-  _debug "user specified tests: ${UNIT_TEST}"
-
-  ((n_elements=${#go_tests[@]}, max=n_elements - 1))
-
-  for ((i = 0; i <= max; i++)); do
-    if [[ "${UNIT_TEST}" =~ (^| )"${go_tests[i]}"( |$) ]]; then
-      _info "running ${go_tests[i]}"
-      _"${go_tests[i]}"
-    else
-      _debug "skipping ${go_tests[i]}"
-    fi
-  done
+function _goimports {
+    echo "Running 'goimports'"
+    go get golang.org/x/tools/cmd/goimports
+    test -z "$(goimports -l -d $TEST_DIRS | tee /dev/stderr)"
 }
 
-if [[ $TEST_TYPE == "legacy" ]]; then
-  echo "mode: count" > profile.cov
-  export TEST_TYPE="unit"
-  test_unit
-elif [[ $TEST_TYPE == "small" ]]; then
-  if [[ -f "${__dir}/small.sh" ]]; then
-    . "${__dir}/small.sh"
-  else
+function _govet {
+    echo "Running 'go vet'"
+    go vet $PKG_DIRS
+}
+
+function _unit_test_with_coverage {
+    echo "Running unit tests..."
+
+    go get github.com/smartystreets/goconvey/convey
+    go get golang.org/x/tools/cmd/cover
+
+    # As of Go 1.6, we cannot use the test profile flag with multiple packages.
+    # Therefore, we run 'go test' for each package, and concatenate the results
+    # into 'profile.cov'.
     echo "mode: count" > profile.cov
-    test_unit
-  fi
-elif [[ $TEST_TYPE == "medium" ]]; then
-  if [[ -f "${__dir}/medium.sh" ]]; then
-    . "${__dir}/medium.sh"
-  else
-    UNIT_TEST="go_test"
-    test_unit
-  fi
-elif [[ $TEST_TYPE == "large" ]]; then
-  if [[ "${TEST_K8S}" != "0" && -f "$__dir/large_k8s.sh" ]]; then
-    . "${__dir}/large_k8s.sh"
-  elif [[ -f "${__dir}/large_compose.sh" ]]; then
-    . "${__dir}/large_compose.sh"
-  else
-    _info "No large tests."
-  fi
-elif [[ $TEST_TYPE == "build" ]]; then
-  "${__dir}/build.sh"
-fi
+    mkdir -p ./tmp
+
+    for import_path in $(go list -f={{.ImportPath}} ${PKG_DIRS}); do
+        package=$(basename ${import_path})
+        [[ "$IGNORE_PKGS" =~ $package ]] && continue
+        go test -v --tags=small -covermode=count -coverprofile=./tmp/profile_${package}.cov $import_path
+    done
+
+    for f in ./tmp/profile_*.cov; do
+        tail -n +2 ${f} >> profile.cov
+    done
+
+    rm -rf ./tmp
+    go tool cover -func profile.cov
+}
+
+function _submit_to_coveralls {
+    # Only submit to Coveralls.io if we're running in Travis CI. We don't want
+    # this happening on dev machines! Note that the Coveralls repo token is
+    # available via the $COVERALLS_REPO_TOKEN environment variable, which is
+    # configured for the project in the Travis CI web interface.
+    if [[ $TRAVIS == "true" && $COVERALLS_REPO_TOKEN != "" ]]; then
+        go get github.com/mattn/goveralls
+
+        for attempt in {1..${COVERALLS_MAX_ATTEMPTS}}; do
+            echo "Posting test coverage to Coveralls, attempt ${attempt} of ${COVERALLS_MAX_ATTEMPTS}"
+            goveralls -v -coverprofile=profile.cov -service=travis-ci -repotoken ${COVERALLS_REPO_TOKEN} && break
+        done
+    else
+        echo "Not running in Travis CI (environment variables unset), not posting test coverage to Coveralls!"
+    fi
+}
+
+function _integration_test {
+    echo "Running integration tests..."
+
+    if [[ $TRAVIS == "true" ]]; then
+        echo "Detected that we're running in Travis CI. Provisioning Mesos master and agent..."
+        export SNAP_MESOS_MASTER="127.0.0.1:5050"
+        export SNAP_MESOS_AGENT="127.0.0.1:5051"
+
+        sudo ./scripts/provision-travis.sh --mesos_release ${MESOS_RELEASE} --ip_address 127.0.0.1
+
+        sleep 10
+        set +e
+        sudo service mesos-master status
+        sudo service mesos-slave status
+        sudo tail -100 /var/log/syslog
+        curl http://127.0.0.1:5050
+        curl http://127.0.0.1:5051
+        set -e
+    else
+        echo "Detected that we aren't running in Travis CI. Skipping provisioning of Mesos master and agent..."
+    fi
+
+    go test -v --tags=medium ./...
+}
+
+function main {
+    TEST_SUITE="$1"
+
+    if [[ $TEST_SUITE == "small" ]]; then
+        _gofmt
+        _goimports
+        _govet
+        _unit_test_with_coverage
+        _submit_to_coveralls
+    elif [[ $TEST_SUITE == "medium" ]]; then
+        _integration_test
+    elif [[ $TEST_SUITE == "build" ]]; then
+        ./scripts/build.sh
+    else
+        echo "Error: unknown test suite ${TEST_SUITE}"
+        exit 1
+    fi
+}
+
+main "$@"
