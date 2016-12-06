@@ -302,7 +302,6 @@ under the [Apache Software License, version 2.0](LICENSE).
 ## Acknowledgements
   * Authors: [Marcin Krolik][marcin-github], [Roger Ignazio][roger-github]
 
-
 [github-issue-11]: https://github.com/intelsdi-x/snap-plugin-collector-mesos/issues/11
 [github-issue-14]: https://github.com/intelsdi-x/snap-plugin-collector-mesos/issues/14
 [github-new-issue]: https://github.com/intelsdi-x/snap-plugin-collector-mesos/issues/new
