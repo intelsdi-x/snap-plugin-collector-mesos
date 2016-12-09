@@ -1,4 +1,4 @@
-// +build integration
+// +build medium
 
 /*
 Copyright 2016 Intel Corporation

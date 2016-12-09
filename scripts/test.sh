@@ -41,7 +41,7 @@ function _unit_test_with_coverage {
     for import_path in $(go list -f={{.ImportPath}} ${PKG_DIRS}); do
         package=$(basename ${import_path})
         [[ "$IGNORE_PKGS" =~ $package ]] && continue
-        go test -v --tags=unit -covermode=count -coverprofile=./tmp/profile_${package}.cov $import_path
+        go test -v --tags=small -covermode=count -coverprofile=./tmp/profile_${package}.cov $import_path
     done
 
     for f in ./tmp/profile_*.cov; do
@@ -78,24 +78,35 @@ function _integration_test {
         export SNAP_MESOS_AGENT="127.0.0.1:5051"
 
         sudo ./scripts/provision-travis.sh --mesos_release ${MESOS_RELEASE} --ip_address 127.0.0.1
+
+        sleep 10
+        set +e
+        sudo service mesos-master status
+        sudo service mesos-slave status
+        sudo tail -100 /var/log/syslog
+        curl http://127.0.0.1:5050
+        curl http://127.0.0.1:5051
+        set -e
     else
         echo "Detected that we aren't running in Travis CI. Skipping provisioning of Mesos master and agent..."
     fi
 
-    go test -v --tags=integration ./...
+    go test -v --tags=medium ./...
 }
 
 function main {
     TEST_SUITE="$1"
 
-    if [[ $TEST_SUITE == "unit" ]]; then
+    if [[ $TEST_SUITE == "small" ]]; then
         _gofmt
         _goimports
         _govet
         _unit_test_with_coverage
         _submit_to_coveralls
-    elif [[ $TEST_SUITE == "integration" ]]; then
+    elif [[ $TEST_SUITE == "medium" ]]; then
         _integration_test
+    elif [[ $TEST_SUITE == "build" ]]; then
+        ./scripts/build.sh
     else
         echo "Error: unknown test suite ${TEST_SUITE}"
         exit 1
