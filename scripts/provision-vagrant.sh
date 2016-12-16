@@ -171,23 +171,32 @@ END
 
 function install_snap {
     local SNAP_PATH="/usr/local/snap"
+    local SNAP_PLUGINS_PATH="${SNAP_PATH}/plugin"
+    local SNAP_BIN_PATH="${SNAP_PATH}/bin"
     if [[ -d $SNAP_PATH ]]; then
         echo "Found an existing Snap installation at ${SNAP_PATH}. Skipping install..."
         return
     fi
 
     echo "Installing snap ${SNAP_RELEASE}..."
-    local SNAP_URL="https://github.com/intelsdi-x/snap/releases/download"
-    local SNAP_FILENAME="snap-${SNAP_RELEASE}-linux-amd64.tar.gz"
-    local SNAP_PLUGINS_FILENAME="snap-plugins-${SNAP_RELEASE}-linux-amd64.tar.gz"
-    curl -sLO "${SNAP_URL}/${SNAP_RELEASE}/${SNAP_FILENAME}"
-    curl -sLO "${SNAP_URL}/${SNAP_RELEASE}/${SNAP_PLUGINS_FILENAME}"
 
     echo "export SNAP_PATH=${SNAP_PATH}"        >> /etc/profile
     echo 'export PATH=${PATH}:${SNAP_PATH}/bin' >> /etc/profile
     mkdir -p $SNAP_PATH
-    tar zxf $SNAP_FILENAME --strip-components=1 -C $SNAP_PATH
-    tar zxf $SNAP_PLUGINS_FILENAME --strip-components=1 -C $SNAP_PATH
+    mkdir -p $SNAP_BIN_PATH
+    mkdir -p $SNAP_PLUGINS_PATH
+
+    local SNAP_URL="https://github.com/intelsdi-x/snap/releases/download"
+    local SNAP_FILENAME="snap-${SNAP_RELEASE}-linux-amd64.tar.gz"
+    curl -sLO "${SNAP_URL}/${SNAP_RELEASE}/${SNAP_FILENAME}"
+    tar zxf $SNAP_FILENAME -C $SNAP_BIN_PATH
+
+    pushd $SNAP_PLUGINS_PATH
+    curl -sLO http://snap.ci.snap-telemetry.io/plugins/snap-plugin-publisher-file/latest/linux/x86_64/snap-plugin-publisher-file
+    curl -sLO http://snap.ci.snap-telemetry.io/plugins/snap-plugin-publisher-influxdb/latest/linux/x86_64/snap-plugin-publisher-influxdb
+    curl -sLO http://snap.ci.snap-telemetry.io/plugins/snap-plugin-collector-mesos/latest/linux/x86_64/snap-plugin-collector-mesos
+    chmod +x *
+    popd
 
     cat << END
 ------------------------------------------------------------------------
@@ -198,7 +207,7 @@ The Snap plugins have also been installed to ${SNAP_PATH}/plugin.
 When you're ready, you can start the snap daemon by running:
 
   snapteld --plugin-trust 0 --log-level 1 --auto-discover \\
-    "${SNAP_PATH}/plugin" >> /var/log/snap.log 2>&1 &
+    "${SNAP_PATH}/plugin"
 
 or something similar.
 

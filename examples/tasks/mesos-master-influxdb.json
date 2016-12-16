@@ -47,7 +47,7 @@
       "process": null,
       "publish": [
         {
-          "plugin_name": "influx",
+          "plugin_name": "influxdb",
           "config": {
             "host": "10.180.10.180",
             "port": 8086,
