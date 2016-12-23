@@ -44,24 +44,7 @@ type Resources struct {
 	CPUs float64 `json:"cpus"`
 	Disk float64 `json:"disk"`
 	Mem  float64 `json:"mem"`
-}
-
-// Recursively traverse the Frameworks struct, building "/"-delimited strings that resemble snap metric types.
-func GetFrameworksMetricTypes() ([]string, error) {
-	log.Debug("Getting frameworks metric types from protobuf (mesos_pb2)")
-	namespaces := []string{}
-	if err := ns.FromCompositeObject(Framework{}, "", &namespaces); err != nil {
-		log.Error(err)
-		return nil, err
-	}
-	for i := 0; i < len(namespaces); i++ {
-		if namespaces[i] == "id" {
-			namespaces = append(namespaces[:i], namespaces[i+1:]...)
-			break
-		}
-	}
-	return namespaces, nil
-
+	GPUs float64 `json:"gpus"`
 }
 
 // Get metrics from the '/master/frameworks' endpoint on the master. This endpoint returns JSON about the overall
@@ -70,7 +53,7 @@ func GetFrameworks(host string) ([]*Framework, error) {
 	log.Debug("Getting active frameworks resource utilization from master ", host)
 	var frameworks Frameworks
 
-	c := client.NewClient(host, "/master/frameworks", time.Duration(10))
+	c := client.NewClient(host, "/frameworks", time.Duration(10))
 	if err := c.Fetch(&frameworks); err != nil {
 		log.Error(err)
 		return nil, err
@@ -102,7 +85,7 @@ func GetMetricsSnapshot(host string) (map[string]float64, error) {
 // Determine if a given host is currently the leader, based on the location provided by the '/master/redirect' endpoint.
 func IsLeader(host string) (bool, error) {
 	log.Debug("Determining if host ", host, " is currently the leader")
-	req, err := http.NewRequest("HEAD", "http://"+host+"/master/redirect", nil)
+	req, err := http.NewRequest("HEAD", "http://"+host+"/redirect", nil)
 	if err != nil {
 		e := fmt.Errorf("request error: %s", err)
 		log.Error(e)
