@@ -24,7 +24,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/client"
-	"github.com/intelsdi-x/snap-plugin-utilities/ns"
+	//	"github.com/intelsdi-x/snap-plugin-utilities/ns"
 )
 
 type Frameworks struct {
@@ -86,7 +86,7 @@ func GetMetricsSnapshot(host string) (map[string]float64, error) {
 func IsLeader(host string) (bool, error) {
 	log.Debug("Determining if host ", host, " is currently the leader")
 	req, err := http.NewRequest("HEAD", "http://"+host+"/redirect", nil)
-	if err != nil {
+	if err != nil || req == nil {
 		e := fmt.Errorf("request error: %s", err)
 		log.Error(e)
 		return false, e
@@ -94,7 +94,9 @@ func IsLeader(host string) (bool, error) {
 
 	resp, err := http.DefaultTransport.RoundTrip(req)
 	if err != nil {
-		if resp.StatusCode == 307 {
+		if resp == nil {
+			return false, err
+		} else if resp.StatusCode == 307 {
 			log.Debug("Got expected response HTTP 307")
 		} else if resp.StatusCode != 307 {
 			e := fmt.Errorf("error: expected HTTP 307, got %d", resp.StatusCode)
