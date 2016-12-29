@@ -17,15 +17,15 @@ limitations under the License.
 package mesos
 
 import (
+	"encoding/json"
+	"reflect"
 	"strings"
 	"time"
 
-	"encoding/json"
 	log "github.com/Sirupsen/logrus"
 	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/agent"
 	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/master"
 	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin"
-	"reflect"
 )
 
 const (
@@ -46,10 +46,11 @@ const (
 
 func NewMesosCollector() *Mesos {
 	log.Debug("Created a new instance of the Mesos collector plugin")
-	return &Mesos{}
+	return &Mesos{LastRun: 0}
 }
 
 type Mesos struct {
+	LastRun int64
 }
 
 func (m *Mesos) GetConfigPolicy() (plugin.ConfigPolicy, error) {
@@ -78,11 +79,11 @@ func (m *Mesos) GetMetricTypes(cfg plugin.Config) ([]plugin.Metric, error) {
 
 func decodeTree(tree *interface{}, ret *map[string]interface{}, cpath string) {
 	//	if reflect.ValueOf(tree).Kind() == reflect.Map {
-	i2 := (*tree).(map[string]*interface{})
+	i2 := (*tree).(map[string]interface{})
 	for k, v := range i2 {
 		if reflect.ValueOf(v).Kind() == reflect.Map {
 			key := cpath + "/" + k
-			decodeTree(v, ret, key)
+			decodeTree(&v, ret, key)
 		} else {
 			//			ret2 := (*ret)
 			key := cpath + "/" + k
@@ -132,7 +133,7 @@ func (m *Mesos) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error) {
 				}
 
 				for k, v := range snapshot {
-					ns := plugin.NewNamespace(PluginVendor, PluginName)
+					ns := plugin.NewNamespace(PluginVendor, PluginName, "master")
 					metric := plugin.Metric{
 						Timestamp: timestamp,
 						Namespace: ns.AddStaticElements(strings.Split(k, "/")...),
@@ -147,16 +148,16 @@ func (m *Mesos) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error) {
 
 				for _, framework := range frameworks {
 					var tree interface{}
-					var data map[string]interface{}
+					data := make(map[string]interface{})
 					bytes, _ := json.Marshal(framework)
 					json.Unmarshal(bytes, &tree)
 					decodeTree(&tree, &data, "")
 
 					for k, v := range data {
-						ns := plugin.NewNamespace(PluginVendor, PluginName)
+						ns := plugin.NewNamespace(PluginVendor, PluginName, "master", "framework", framework.ID)
 						metric := plugin.Metric{
 							Timestamp: timestamp,
-							Namespace: ns.AddStaticElements(strings.Split(k, "/")...),
+							Namespace: ns.AddStaticElements(strings.Split(k, "/")[1:]...),
 							Config:    item.Config,
 							Data:      v,
 							Tags:      tags,
@@ -171,6 +172,7 @@ func (m *Mesos) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error) {
 			if err != nil {
 				return nil, err
 			}
+
 			tags := map[string]string{"source": endpoint}
 
 			snapshot, err := agent.GetMetricsSnapshot(endpoint)
@@ -184,7 +186,7 @@ func (m *Mesos) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error) {
 					//return nil, err //TODO silently drop error
 				}
 				for k, v := range snapshot {
-					ns := plugin.NewNamespace(PluginVendor, PluginName)
+					ns := plugin.NewNamespace(PluginVendor, PluginName, "agent")
 					metric := plugin.Metric{
 						Timestamp: timestamp,
 						Namespace: ns.AddStaticElements(strings.Split(k, "/")...),
@@ -199,16 +201,15 @@ func (m *Mesos) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error) {
 
 				for _, executor := range executors {
 					var tree interface{}
-					var data map[string]interface{}
+					data := make(map[string]interface{})
 					bytes, _ := json.Marshal(executor)
 					json.Unmarshal(bytes, &tree)
 					decodeTree(&tree, &data, "")
-
 					for k, v := range data {
-						ns := plugin.NewNamespace(PluginVendor, PluginName)
+						ns := plugin.NewNamespace(PluginVendor, PluginName, "agent", "executor", executor.ID)
 						metric := plugin.Metric{
 							Timestamp: timestamp,
-							Namespace: ns.AddStaticElements(strings.Split(k, "/")...),
+							Namespace: ns.AddStaticElements(strings.Split(k, "/")[1:]...),
 							Config:    item.Config,
 							Data:      v,
 							Tags:      tags,
@@ -216,9 +217,34 @@ func (m *Mesos) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error) {
 						}
 						metrics = append(metrics, metric)
 					}
+					if m.LastRun > 0 {
+						cTree := tree.(map[string]interface{})
+						if sTree, ok := cTree["statistics"]; ok {
+							dTree := sTree.(map[string]interface{})
+							if cpus_limit, ok := dTree["cpus_limit"]; ok {
+								cl, _ := cpus_limit.(float64)
+								if cpus_system_time_secs, ok := dTree["cpus_system_time_secs"]; ok {
+									cs, _ := cpus_system_time_secs.(float64)
+									if cpus_user_time_secs, ok := dTree["cpus_user_time_secs"]; ok {
+										cu, _ := cpus_user_time_secs.(float64)
+										cd := (100000000000 * (cs + cu)) / (cl * (float64(timestamp.UnixNano()) - float64(m.LastRun)))
+										ns := plugin.NewNamespace(PluginVendor, PluginName, "agent", "executor", executor.ID, "statistics", "cpus_util_pc_diff")
+										metrics = append(metrics, plugin.Metric{
+											Timestamp: timestamp,
+											Namespace: ns,
+											Config:    item.Config,
+											Data:      cd,
+											Tags:      tags,
+											Version:   PluginVersion,
+										})
+									}
+								}
+							}
+						}
+					}
 				}
+				m.LastRun = timestamp.UnixNano()
 			}
-
 		}
 	}
 	log.Debug("Collected a total of ", len(metrics), " metrics.")
