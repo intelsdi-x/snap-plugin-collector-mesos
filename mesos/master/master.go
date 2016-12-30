@@ -24,7 +24,8 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/client"
-	//	"github.com/intelsdi-x/snap-plugin-utilities/ns"
+	"net"
+	"os"
 )
 
 type Frameworks struct {
@@ -83,7 +84,7 @@ func GetMetricsSnapshot(host string) (map[string]float64, error) {
 }
 
 // Determine if a given host is currently the leader, based on the location provided by the '/master/redirect' endpoint.
-func IsLeader(host string) (bool, error) {
+func IsLeader(host string, local bool) (bool, error) {
 	log.Debug("Determining if host ", host, " is currently the leader")
 	req, err := http.NewRequest("HEAD", "http://"+host+"/redirect", nil)
 	if err != nil || req == nil {
@@ -115,11 +116,30 @@ func IsLeader(host string) (bool, error) {
 		return false, err
 	}
 
-	if strings.Contains(location.Host, host) {
+	if (strings.Contains(location.Host, host)) || (local && matchLocalIps(location.Host)) {
 		log.Debug("Host ", host, " is currently the leader (matched ", location.Host, ")")
 		return true, nil
 	} else {
 		log.Debug("Host ", host, "is not currently the leader (did not match ", location.Host, ")")
 		return false, nil
 	}
+}
+
+func matchLocalIps(ip string) bool {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		os.Stderr.WriteString("Oops: " + err.Error() + "\n")
+		os.Exit(1)
+	}
+
+	for _, a := range addrs {
+		if ipnet, ok := a.(*net.IPNet); ok {
+			if ipnet.IP.To4() != nil {
+				if strings.Contains(ip, ipnet.IP.String()) {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }

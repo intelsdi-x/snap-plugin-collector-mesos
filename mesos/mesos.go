@@ -19,6 +19,7 @@ package mesos
 import (
 	"encoding/json"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -32,17 +33,7 @@ const (
 	PluginVendor  = "intel"
 	PluginName    = "mesos"
 	PluginVersion = 2
-	//	pluginType = plugin.CollectorPluginType
 )
-
-/*func Meta() *plugin.PluginMeta {
-	return plugin.NewPluginMeta(
-		pluginName,
-		pluginVersion,
-		pluginType,
-		[]string{plugin.SnapGOBContentType},
-		[]string{plugin.SnapGOBContentType})
-}*/
 
 func NewMesosCollector() *Mesos {
 	log.Debug("Created a new instance of the Mesos collector plugin")
@@ -62,11 +53,13 @@ func (m *Mesos) GetConfigPolicy() (plugin.ConfigPolicy, error) {
 		"master",
 		false,
 		plugin.SetDefaultString("127.0.0.1:5050"))
+	policy.AddNewBoolRule(configKeyMaster, "resolve_local_ips", false, plugin.SetDefaultBool(true))
 
 	policy.AddNewStringRule(configKeyAgent,
 		"agent",
 		false,
 		plugin.SetDefaultString("127.0.0.1:5051"))
+
 	return *policy, nil
 }
 
@@ -106,18 +99,22 @@ func (m *Mesos) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error) {
 
 		switch item.Namespace.Strings()[2] {
 		case "master":
+			log.Debug("Start master collection ...")
 			endpoint, err := item.Config.GetString("master")
 			if err != nil {
 				return nil, err
 			}
 			tags := map[string]string{"source": endpoint}
+			resolve, err := item.Config.GetBool("resolve_local_ips")
+			if err != nil {
+				return nil, err
+			}
 
-			isLeader, err := master.IsLeader(endpoint)
+			isLeader, err := master.IsLeader(endpoint, resolve)
+			log.Debug("IsLeader: " + strconv.FormatBool(isLeader))
 			if err != nil {
 				log.Warning(err)
 				isLeader = false
-				//return metrics,nil;
-				//return nil, err //TODO silently drop error
 			}
 			if isLeader {
 				snapshot, err := master.GetMetricsSnapshot(endpoint)
@@ -125,13 +122,13 @@ func (m *Mesos) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error) {
 					log.Error(err)
 					return nil, err
 				}
-
+				log.Debug("Query frameworks ...")
 				frameworks, err := master.GetFrameworks(endpoint)
 				if err != nil {
 					log.Error(err)
 					return nil, err
 				}
-
+				log.Debug("Metrics snapshot ...")
 				for k, v := range snapshot {
 					ns := plugin.NewNamespace(PluginVendor, PluginName, "master")
 					metric := plugin.Metric{
@@ -145,7 +142,7 @@ func (m *Mesos) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error) {
 
 					metrics = append(metrics, metric)
 				}
-
+				log.Debug("Parse framwork information ...")
 				for _, framework := range frameworks {
 					var tree interface{}
 					data := make(map[string]interface{})
@@ -166,25 +163,24 @@ func (m *Mesos) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error) {
 						metrics = append(metrics, metric)
 					}
 				}
+			} else {
+				log.Debug("Not leader.")
 			}
 		case "agent":
 			endpoint, err := item.Config.GetString("agent")
 			if err != nil {
 				return nil, err
 			}
-
 			tags := map[string]string{"source": endpoint}
-
 			snapshot, err := agent.GetMetricsSnapshot(endpoint)
 			if err != nil {
 				log.Warning(err)
-				//return nil, err //TODO silently drop error
 			} else {
 				executors, err := agent.GetMonitoringStatistics(endpoint)
 				if err != nil {
 					log.Warning(err)
-					//return nil, err //TODO silently drop error
 				}
+
 				for k, v := range snapshot {
 					ns := plugin.NewNamespace(PluginVendor, PluginName, "agent")
 					metric := plugin.Metric{
