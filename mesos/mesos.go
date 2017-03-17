@@ -189,9 +189,10 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 							continue
 						}
 						// substituting "framework" wildcard with particular framework id
-						requested[3].Value = framework.ID
+						rendered := cloneNamespace(requested)
+						rendered[3].Value = framework.ID
 						// TODO(roger): units
-						metrics = append(metrics, *plugin.NewMetricType(requested, now, tags, "", val))
+						metrics = append(metrics, *plugin.NewMetricType(rendered, now, tags, "", val))
 
 					}
 				} else {
@@ -239,12 +240,13 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 						log.Warn("Attempted to collect metric ", requested.String(), " but it returned nil!")
 						continue
 					}
+					rendered := cloneNamespace(requested)
 					// substituting "framework" wildcard with particular framework id
-					requested[3].Value = exec.Framework
+					rendered[3].Value = exec.Framework
 					// substituting "executor" wildcard with particular executor id
-					requested[4].Value = exec.ID
+					rendered[4].Value = exec.ID
 					// TODO(roger): units
-					metrics = append(metrics, *plugin.NewMetricType(requested, now, tags, "", val))
+					metrics = append(metrics, *plugin.NewMetricType(rendered, now, tags, "", val))
 
 				}
 			} else {
@@ -299,4 +301,11 @@ func getConfig(cfg interface{}) (map[string]string, error) {
 	}
 
 	return items, nil
+}
+
+func cloneNamespace(ns core.Namespace) core.Namespace {
+	nsCopy := make(core.Namespace, len(ns))
+	copy(nsCopy, ns)
+
+	return nsCopy
 }
