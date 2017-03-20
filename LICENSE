@@ -175,6 +175,3 @@
       of your accepting any such warranty or additional liability.
 
    END OF TERMS AND CONDITIONS
-
-This product contains code from Apache/Mesos, which is available
-under an Apache License 2.0. For details, see mesos/mesos_pb2/mesos_pb2.go.
