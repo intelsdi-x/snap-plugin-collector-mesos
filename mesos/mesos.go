@@ -240,11 +240,13 @@ func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, er
 						continue
 					}
 					// substituting "framework" wildcard with particular framework id
-					requested[3].Value = exec.Framework
+          ns1 := make([]core.NamespaceElement, len(requested))
+          copy (ns1, requested)
+					ns1[3].Value = exec.Framework
 					// substituting "executor" wildcard with particular executor id
-					requested[4].Value = exec.ID
+					ns1[4].Value = exec.ID
 					// TODO(roger): units
-					metrics = append(metrics, *plugin.NewMetricType(requested, now, tags, "", val))
+					metrics = append(metrics, *plugin.NewMetricType(ns1, now, tags, "", val))
 
 				}
 			} else {
