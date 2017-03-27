@@ -17,17 +17,16 @@ limitations under the License.
 package main
 
 import (
-	"os"
-
 	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos"
-	"github.com/intelsdi-x/snap/control/plugin"
+	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin"
 )
 
 // plugin bootstrap
 func main() {
-	plugin.Start(
-		mesos.Meta(),
-		mesos.NewMesosCollector(),
-		os.Args[1],
+	mesosPlugin := mesos.NewMesosCollector()
+	plugin.StartCollector(
+		mesosPlugin,
+		mesos.PluginName,
+		mesos.PluginVersion,
 	)
 }

@@ -31,8 +31,8 @@ import (
 func TestMesosPlugin(t *testing.T) {
 	Convey("Meta should return metadata for the plugin", t, func() {
 		meta := Meta()
-		So(meta.Name, ShouldResemble, pluginName)
-		So(meta.Version, ShouldResemble, pluginVersion)
+		So(meta.Name, ShouldResemble, PluginName)
+		So(meta.Version, ShouldResemble, PluginVersion)
 		So(meta.Type, ShouldResemble, pluginType)
 	})
 

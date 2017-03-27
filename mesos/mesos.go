@@ -17,286 +17,232 @@ limitations under the License.
 package mesos
 
 import (
-	"fmt"
+	"encoding/json"
+	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/agent"
 	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/master"
-	"github.com/intelsdi-x/snap-plugin-utilities/config"
-	"github.com/intelsdi-x/snap-plugin-utilities/ns"
-	"github.com/intelsdi-x/snap/control/plugin"
-	"github.com/intelsdi-x/snap/control/plugin/cpolicy"
-	"github.com/intelsdi-x/snap/core"
+	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin"
 )
 
 const (
-	pluginVendor  = "intel"
-	pluginName    = "mesos"
-	pluginVersion = 1
-	pluginType    = plugin.CollectorPluginType
+	PluginVendor  = "intel"
+	PluginName    = "mesos"
+	PluginVersion = 2
 )
-
-func Meta() *plugin.PluginMeta {
-	return plugin.NewPluginMeta(
-		pluginName,
-		pluginVersion,
-		pluginType,
-		[]string{plugin.SnapGOBContentType},
-		[]string{plugin.SnapGOBContentType})
-}
 
 func NewMesosCollector() *Mesos {
 	log.Debug("Created a new instance of the Mesos collector plugin")
-	return &Mesos{}
+	return &Mesos{LastRun: 0}
 }
 
 type Mesos struct {
+	LastRun int64
 }
 
-func (m *Mesos) GetConfigPolicy() (*cpolicy.ConfigPolicy, error) {
-	return cpolicy.New(), nil
+func (m *Mesos) GetConfigPolicy() (plugin.ConfigPolicy, error) {
+	policy := plugin.NewConfigPolicy()
+	configKeyMaster := []string{"intel", "mesos", "master"}
+	configKeyAgent := []string{"intel", "mesos", "agent"}
+
+	policy.AddNewStringRule(configKeyMaster,
+		"master",
+		false,
+		plugin.SetDefaultString("127.0.0.1:5050"))
+	policy.AddNewBoolRule(configKeyMaster, "resolve_local_ips", false, plugin.SetDefaultBool(true))
+
+	policy.AddNewStringRule(configKeyAgent,
+		"agent",
+		false,
+		plugin.SetDefaultString("127.0.0.1:5051"))
+
+	return *policy, nil
 }
 
-func (m *Mesos) GetMetricTypes(cfg plugin.ConfigType) ([]plugin.MetricType, error) {
-	configItems, err := getConfig(cfg)
-	if err != nil {
-		log.Error(err)
-		return nil, err
-	}
-
-	metricTypes := []plugin.MetricType{}
-
-	if configItems["master"] != "" {
-		log.Info("Getting metric types for the Mesos master at ", configItems["master"])
-		master_mts, err := master.GetMetricsSnapshot(configItems["master"])
-		if err != nil {
-			log.Error(err)
-			return nil, err
-		}
-
-		for key, _ := range master_mts {
-			namespace := core.NewNamespace(pluginVendor, pluginName, "master").
-				AddStaticElements(strings.Split(key, "/")...)
-			log.Debug("Adding metric to catalog: ", namespace.String())
-			metricTypes = append(metricTypes, plugin.MetricType{Namespace_: namespace})
-		}
-
-		framework_mts, err := master.GetFrameworksMetricTypes()
-		if err != nil {
-			log.Error(err)
-			return nil, err
-		}
-
-		for _, key := range framework_mts {
-			namespace := core.NewNamespace(pluginVendor, pluginName, "master").
-				AddDynamicElement("framework_id", "Framework ID").
-				AddStaticElements(strings.Split(key, "/")...)
-			log.Debug("Adding metric to catalog: ", namespace.String())
-			metricTypes = append(metricTypes, plugin.MetricType{Namespace_: namespace})
-		}
-	}
-
-	if configItems["agent"] != "" {
-		log.Info("Getting metric types for the Mesos agent at ", configItems["agent"])
-		agent_mts, err := agent.GetMetricsSnapshot(configItems["agent"])
-		if err != nil {
-			log.Error(err)
-			return nil, err
-		}
-
-		for key, _ := range agent_mts {
-			namespace := core.NewNamespace(pluginVendor, pluginName, "agent").
-				AddStaticElements(strings.Split(key, "/")...)
-			log.Debug("Adding metric to catalog: ", namespace.String())
-			metricTypes = append(metricTypes, plugin.MetricType{Namespace_: namespace})
-		}
-
-		agent_stats, err := agent.GetMonitoringStatisticsMetricTypes(configItems["agent"])
-		if err != nil {
-			log.Error(err)
-			return nil, err
-		}
-
-		for _, key := range agent_stats {
-			namespace := core.NewNamespace(pluginVendor, pluginName, "agent").
-				AddDynamicElement("framework_id", "Framework ID").
-				AddDynamicElement("executor_id", "Executor ID").
-				AddStaticElements(strings.Split(key, "/")...)
-			log.Debug("Adding metric to catalog: ", namespace.String())
-			metricTypes = append(metricTypes, plugin.MetricType{Namespace_: namespace})
-		}
-	}
-
+func (m *Mesos) GetMetricTypes(cfg plugin.Config) ([]plugin.Metric, error) {
+	var metricTypes []plugin.Metric
+	metricTypes = append(metricTypes, plugin.Metric{Namespace: plugin.NewNamespace(PluginVendor, PluginName, "master"), Version: PluginVersion})
+	metricTypes = append(metricTypes, plugin.Metric{Namespace: plugin.NewNamespace(PluginVendor, PluginName, "agent"), Version: PluginVersion})
 	return metricTypes, nil
 }
 
-func (m *Mesos) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, error) {
-	configItems, err := getConfig(mts[0])
-	if err != nil {
-		return nil, err
-	}
-
-	requestedMaster := []core.Namespace{}
-	requestedAgent := []core.Namespace{}
-
-	for _, metricType := range mts {
-		switch metricType.Namespace().Strings()[2] {
-		case "master":
-			requestedMaster = append(requestedMaster, metricType.Namespace())
-		case "agent":
-			requestedAgent = append(requestedAgent, metricType.Namespace())
-		}
-	}
-
-	// Translate Mesos metrics into Snap PluginMetrics
-	now := time.Now()
-	metrics := []plugin.MetricType{}
-
-	if configItems["master"] != "" && len(requestedMaster) > 0 {
-		log.Info("Collecting ", len(requestedMaster), " metrics from the master")
-		isLeader, err := master.IsLeader(configItems["master"])
-		if err != nil {
-			log.Error(err)
-			return nil, err
-		}
-		if isLeader {
-			snapshot, err := master.GetMetricsSnapshot(configItems["master"])
-			if err != nil {
-				log.Error(err)
-				return nil, err
-			}
-
-			frameworks, err := master.GetFrameworks(configItems["master"])
-			if err != nil {
-				log.Error(err)
-				return nil, err
-			}
-
-			tags := map[string]string{"source": configItems["master"]}
-
-			for _, requested := range requestedMaster {
-				isDynamic, _ := requested.IsDynamic()
-				if isDynamic {
-					n := requested.Strings()[4:]
-
-					// Iterate through the array of frameworks returned by GetFrameworks()
-					for _, framework := range frameworks {
-						val := ns.GetValueByNamespace(framework, n)
-						if val == nil {
-							log.Warn("Attempted to collect metric ", requested.String(), " but it returned nil!")
-							continue
-						}
-						// substituting "framework" wildcard with particular framework id
-						requested[3].Value = framework.ID
-						// TODO(roger): units
-						metrics = append(metrics, *plugin.NewMetricType(requested, now, tags, "", val))
-
-					}
-				} else {
-					n := requested.Strings()[3:]
-					val, ok := snapshot[strings.Join(n, "/")]
-					if !ok {
-						e := fmt.Errorf("error: requested metric %s not found", requested.String())
-						log.Error(e)
-						return nil, e
-					}
-					//TODO(kromar): is it possible to provide unit NewMetricType(ns, time, tags, unit, value)?
-					// I'm leaving empty string for now...
-					metrics = append(metrics, *plugin.NewMetricType(requested, now, tags, "", val))
-				}
-			}
+func decodeTree(tree *interface{}, ret *map[string]interface{}, cpath string) {
+	//	if reflect.ValueOf(tree).Kind() == reflect.Map {
+	i2 := (*tree).(map[string]interface{})
+	for k, v := range i2 {
+		if reflect.ValueOf(v).Kind() == reflect.Map {
+			key := cpath + "/" + k
+			decodeTree(&v, ret, key)
 		} else {
-			log.Info("Attempted CollectMetrics() on ", configItems["master"], "but it isn't the leader. Skipping...")
+			//			ret2 := (*ret)
+			key := cpath + "/" + k
+			(*ret)[key] = v
 		}
 	}
-
-	if configItems["agent"] != "" && len(requestedAgent) > 0 {
-		log.Info("Collecting ", len(requestedAgent), " metrics from the agent")
-		snapshot, err := agent.GetMetricsSnapshot(configItems["agent"])
-		if err != nil {
-			log.Error(err)
-			return nil, err
-		}
-
-		executors, err := agent.GetMonitoringStatistics(configItems["agent"])
-		if err != nil {
-			log.Error(err)
-			return nil, err
-		}
-
-		tags := map[string]string{"source": configItems["agent"]}
-
-		for _, requested := range requestedAgent {
-			n := requested.Strings()[5:]
-			isDynamic, _ := requested.IsDynamic()
-			if isDynamic {
-				// Iterate through the array of executors returned by GetMonitoringStatistics()
-				for _, exec := range executors {
-					val := ns.GetValueByNamespace(exec.Statistics, n)
-					if val == nil {
-						log.Warn("Attempted to collect metric ", requested.String(), " but it returned nil!")
-						continue
-					}
-					// substituting "framework" wildcard with particular framework id
-					requested[3].Value = exec.Framework
-					// substituting "executor" wildcard with particular executor id
-					requested[4].Value = exec.ID
-					// TODO(roger): units
-					metrics = append(metrics, *plugin.NewMetricType(requested, now, tags, "", val))
-
-				}
-			} else {
-				// Get requested metrics from the snapshot map
-				n := requested.Strings()[3:]
-				val, ok := snapshot[strings.Join(n, "/")]
-				if !ok {
-					e := fmt.Errorf("error: requested metric %v not found", requested.String())
-					log.Error(e)
-					return nil, e
-				}
-
-				//TODO(kromar): units here also?
-				metrics = append(metrics, *plugin.NewMetricType(requested, now, tags, "", val))
-			}
-		}
-	}
-
-	log.Debug("Collected a total of ", len(metrics), " metrics.")
-	return metrics, nil
 }
 
-func getConfig(cfg interface{}) (map[string]string, error) {
-	items := make(map[string]string)
-	var ok bool
+func (m *Mesos) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error) {
+	metrics := []plugin.Metric{}
+	timestamp := time.Now()
 
-	// Note: although config.GetConfigItems can accept multiple config parameter names, it appears that if
-	// any of those names are missing, GetConfigItems() will `return nil, err`. Since this plugin will work
-	// individually with master or agent (or both), we break this up into two separate lookups and then
-	// test for the existence of the configuration parameter to determine which metric types are available.
+	for _, item := range mts {
+		/*
+			filter,err := item.Config.GetString("filter")
+			if err != nil {
+				return nil, err
+			}
+		*/
 
-	// We expect the value of "master" in the global config to follow the convention "192.168.99.100:5050"
-	master_cfg, master_err := config.GetConfigItem(cfg, "master")
+		switch item.Namespace.Strings()[2] {
+		case "master":
+			log.Debug("Start master collection ...")
+			endpoint, err := item.Config.GetString("master")
+			if err != nil {
+				return nil, err
+			}
+			tags := map[string]string{"source": endpoint}
+			resolve, err := item.Config.GetBool("resolve_local_ips")
+			if err != nil {
+				return nil, err
+			}
 
-	// We expect the value of "agent" in the global config to follow the convention "192.168.99.100:5051"
-	agent_cfg, agent_err := config.GetConfigItem(cfg, "agent")
+			isLeader, err := master.IsLeader(endpoint, resolve)
+			log.Debug("IsLeader: " + strconv.FormatBool(isLeader))
+			if err != nil {
+				log.Warning(err)
+				isLeader = false
+			}
+			if isLeader {
+				snapshot, err := master.GetMetricsSnapshot(endpoint)
+				if err != nil {
+					log.Error(err)
+					return nil, err
+				}
+				log.Debug("Query frameworks ...")
+				frameworks, err := master.GetFrameworks(endpoint)
+				if err != nil {
+					log.Error(err)
+					return nil, err
+				}
+				log.Debug("Metrics snapshot ...")
+				for k, v := range snapshot {
+					ns := plugin.NewNamespace(PluginVendor, PluginName, "master")
+					metric := plugin.Metric{
+						Timestamp: timestamp,
+						Namespace: ns.AddStaticElements(strings.Split(k, "/")...),
+						Config:    item.Config,
+						Data:      v,
+						Tags:      tags,
+						Version:   PluginVersion,
+					}
 
-	if master_err != nil && agent_err != nil {
-		e := fmt.Errorf("error: no global config specified for 'master' and 'agent'.")
-		log.Error(e)
-		return items, e
+					metrics = append(metrics, metric)
+				}
+				log.Debug("Parse framwork information ...")
+				for _, framework := range frameworks {
+					var tree interface{}
+					data := make(map[string]interface{})
+					bytes, _ := json.Marshal(framework)
+					json.Unmarshal(bytes, &tree)
+					decodeTree(&tree, &data, "")
+
+					for k, v := range data {
+						ns := plugin.NewNamespace(PluginVendor, PluginName, "master", "framework", framework.ID)
+						metric := plugin.Metric{
+							Timestamp: timestamp,
+							Namespace: ns.AddStaticElements(strings.Split(k, "/")[1:]...),
+							Config:    item.Config,
+							Data:      v,
+							Tags:      tags,
+							Version:   PluginVersion,
+						}
+						metrics = append(metrics, metric)
+					}
+				}
+			} else {
+				log.Debug("Not leader.")
+			}
+		case "agent":
+			endpoint, err := item.Config.GetString("agent")
+			if err != nil {
+				return nil, err
+			}
+			tags := map[string]string{"source": endpoint}
+			snapshot, err := agent.GetMetricsSnapshot(endpoint)
+			if err != nil {
+				log.Warning(err)
+			} else {
+				executors, err := agent.GetMonitoringStatistics(endpoint)
+				if err != nil {
+					log.Warning(err)
+				}
+
+				for k, v := range snapshot {
+					ns := plugin.NewNamespace(PluginVendor, PluginName, "agent")
+					metric := plugin.Metric{
+						Timestamp: timestamp,
+						Namespace: ns.AddStaticElements(strings.Split(k, "/")...),
+						Config:    item.Config,
+						Data:      v,
+						Tags:      tags,
+						Version:   PluginVersion,
+					}
+
+					metrics = append(metrics, metric)
+				}
+
+				for _, executor := range executors {
+					var tree interface{}
+					data := make(map[string]interface{})
+					bytes, _ := json.Marshal(executor)
+					json.Unmarshal(bytes, &tree)
+					decodeTree(&tree, &data, "")
+					for k, v := range data {
+						ns := plugin.NewNamespace(PluginVendor, PluginName, "agent", "executor", executor.ID)
+						metric := plugin.Metric{
+							Timestamp: timestamp,
+							Namespace: ns.AddStaticElements(strings.Split(k, "/")[1:]...),
+							Config:    item.Config,
+							Data:      v,
+							Tags:      tags,
+							Version:   PluginVersion,
+						}
+						metrics = append(metrics, metric)
+					}
+					if m.LastRun > 0 {
+						cTree := tree.(map[string]interface{})
+						if sTree, ok := cTree["statistics"]; ok {
+							dTree := sTree.(map[string]interface{})
+							if cpus_limit, ok := dTree["cpus_limit"]; ok {
+								cl, _ := cpus_limit.(float64)
+								if cpus_system_time_secs, ok := dTree["cpus_system_time_secs"]; ok {
+									cs, _ := cpus_system_time_secs.(float64)
+									if cpus_user_time_secs, ok := dTree["cpus_user_time_secs"]; ok {
+										cu, _ := cpus_user_time_secs.(float64)
+										cd := (100000000000 * (cs + cu)) / (cl * (float64(timestamp.UnixNano()) - float64(m.LastRun)))
+										ns := plugin.NewNamespace(PluginVendor, PluginName, "agent", "executor", executor.ID, "statistics", "cpus_util_pc_diff")
+										metrics = append(metrics, plugin.Metric{
+											Timestamp: timestamp,
+											Namespace: ns,
+											Config:    item.Config,
+											Data:      cd,
+											Tags:      tags,
+											Version:   PluginVersion,
+										})
+									}
+								}
+							}
+						}
+					}
+				}
+				m.LastRun = timestamp.UnixNano()
+			}
+		}
 	}
-
-	items["master"], ok = master_cfg.(string)
-	if !ok {
-		log.Warn("No global config specified for 'master', only 'agent' metrics will be collected.")
-	}
-
-	items["agent"], ok = agent_cfg.(string)
-	if !ok {
-		log.Warn("No global config specified for 'agent', only 'master' metrics will be collected.")
-	}
-
-	return items, nil
+	log.Debug("Collected a total of ", len(metrics), " metrics.")
+	return metrics, nil
 }
