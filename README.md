@@ -109,7 +109,11 @@ Also, you may want to consider checking out the following tests to understand ho
 
 ### Collected Metrics
 This plugin collects hundreds of metrics from Mesos masters and agents. As such, there are too many to list them all
-here, so instead we've provided a quick overview. To get a complete list of available metrics, you can run the
+here, so instead we've provided a quick overview. 
+
+List of collected metrics is described in [METRICS.md](METRICS.md)
+
+To get a complete list of available metrics, you can run the
 following commands:
 ```
 $ snaptel plugin load snap-plugin-collector-mesos
