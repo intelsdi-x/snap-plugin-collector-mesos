@@ -5,9 +5,9 @@
 This plugin has the ability to gather the following metrics:
 
 Namespace                                                                         | Data Type | Description
-----------------------------------------------------------------------------------|-----------|---------------------
+----------------------------------------------------------------------------------|-----------|---------------
 /intel/mesos/agent/[framework_id]/[executor_id]/cpus_limit                        |           | 
-/intel/mesos/agent/[framework_id]/[executor_id]/cpus_nr_periods                   | 
+/intel/mesos/agent/[framework_id]/[executor_id]/cpus_nr_periods                   |           |
 /intel/mesos/agent/[framework_id]/[executor_id]/cpus_nr_throttled                 |           |
 /intel/mesos/agent/[framework_id]/[executor_id]/cpus_system_time_secs             |           |
 /intel/mesos/agent/[framework_id]/[executor_id]/cpus_throttled_time_secs          |           |
