@@ -24,7 +24,7 @@ import (
 	"net/url"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // Define a client for collecting metrics from a Mesos master/agent over HTTP.
