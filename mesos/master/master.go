@@ -22,9 +22,9 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/client"
 	"github.com/intelsdi-x/snap-plugin-utilities/ns"
+	log "github.com/sirupsen/logrus"
 )
 
 type Frameworks struct {

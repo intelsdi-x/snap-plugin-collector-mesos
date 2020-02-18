@@ -1,0 +1,35 @@
+package: github.com/intelsdi-x/snap-plugin-collector-mesos
+import:
+- package: github.com/sirupsen/logrus
+- package: github.com/intelsdi-x/snap-plugin-utilities
+  subpackages:
+  - config
+  - ns
+  - str
+- package: github.com/intelsdi-x/snap
+  version: ^2.0.0
+  subpackages:
+  - control/plugin
+  - control/plugin/cpolicy
+  - control/plugin/encoding
+  - control/plugin/encrypter
+  - core
+  - core/cdata
+  - core/ctypes
+  - core/serror
+  - pkg/ctree
+  - pkg/schedule
+  - scheduler/wmap
+- package: github.com/jtolds/gls
+  version: 8ddce2a84170772b95dd5d576c48d517b22cac63
+- package: github.com/robfig/cron
+  version: 0f39cf7ebc65a602f45692f9894bd6a193faf8fa
+- package: github.com/oleiade/reflections
+  version: 632977f98cd34d217c4b57d0840ec188b3d3dcaf
+testImport:
+- package: github.com/smartystreets/goconvey
+  subpackages:
+  - convey
+- package: github.com/stretchr/testify
+  subpackages:
+  - mock
