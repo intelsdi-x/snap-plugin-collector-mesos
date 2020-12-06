@@ -1,0 +1,153 @@
+hash: 023564d0b61797db2cce2d77952bb590c9eccd87e5a6edecfa457f126b29d97d
+updated: 2016-12-19T19:55:09.176555037+01:00
+imports:
+- name: camlistore.org
+  version: fbf9f3747ebf7f7481325835fd24bb5b133eaedc
+  subpackages:
+  - pkg/googlestorage
+  - pkg/blob
+  - pkg/constants
+- name: cloud.google.com/go
+  version: 686f0e89858ea78eae54d4b2021e6bfc7d3a30ca
+  subpackages:
+  - compute/metadata
+  - internal
+- name: github.com/golang/glog
+  version: 23def4e6c14b4da8ac2ed8007337bc5eb5007998
+- name: github.com/golang/protobuf
+  version: 888eb0692c857ec880338addf316bd662d5e630e
+  subpackages:
+  - proto
+  - proto/testdata
+  - ptypes/any
+  - protoc-gen-go/descriptor
+- name: github.com/googleapis/gax-go
+  version: da06d194a00e19ce00d9011a13931c3f6f6887c7
+- name: github.com/intelsdi-x/snap
+  version: 8905198aaab5bfb6d50a747477ca401e3a7a33ab
+  subpackages:
+  - control/plugin
+  - control/plugin/cpolicy
+  - core
+  - core/cdata
+  - core/ctypes
+  - control/plugin/encoding
+  - control/plugin/encrypter
+  - control/plugin/rpc
+  - pkg/rpcutil
+  - pkg/ctree
+  - core/serror
+  - pkg/schedule
+  - scheduler/wmap
+  - pkg/stringutils
+- name: github.com/intelsdi-x/snap-plugin-utilities
+  version: 3c37e3965f3fc2f24714779d3bae7ba7032b87a9
+  subpackages:
+  - config
+  - ns
+  - str
+- name: github.com/oleiade/reflections
+  version: 632977f98cd34d217c4b57d0840ec188b3d3dcaf
+- name: github.com/robfig/cron
+  version: 32d9c273155a0506d27cf73dd1246e86a470997e
+- name: github.com/Sirupsen/logrus
+  version: d26492970760ca5d33129d2d799e34be5c4782eb
+- name: go4.org
+  version: 09d86de304dc27e636298361bbfee4ac6ab04f21
+  subpackages:
+  - syncutil/singleflight
+  - readerutil
+- name: golang.org/x/crypto
+  version: aedad9a179ec1ea11b7064c57cbc6dc30d7724ec
+  subpackages:
+  - openpgp
+  - ssh/terminal
+- name: golang.org/x/net
+  version: 04557861f124410b768b1ba5bb3a91b705afbfc6
+  subpackages:
+  - context
+  - trace
+  - http2
+  - http2/hpack
+  - lex/httplex
+  - internal/timeseries
+- name: golang.org/x/oauth2
+  version: 96382aa079b72d8c014eb0c50f6c223d1e6a2de0
+  subpackages:
+  - google
+  - jwt
+  - internal
+  - jws
+- name: golang.org/x/sys
+  version: d75a52659825e75fff6158388dddc6a5b04f9ba5
+  subpackages:
+  - unix
+- name: google.golang.org/api
+  version: 55146ba61254fdb1c26d65ff3c04bc1611ad73fb
+  subpackages:
+  - compute/v1
+  - storage/v1
+  - gensupport
+  - googleapi
+  - googleapi/internal/uritemplates
+- name: google.golang.org/appengine
+  version: 08a149cfaee099e6ce4be01c0113a78c85ee1dee
+  subpackages:
+  - urlfetch
+  - internal
+  - internal/urlfetch
+  - internal/app_identity
+  - internal/modules
+  - user
+  - datastore
+  - internal/base
+  - internal/blobstore
+  - internal/capability
+  - log
+  - internal/channel
+  - internal/datastore
+  - taskqueue
+  - internal/image
+  - internal/log
+  - internal/remote_api
+- name: google.golang.org/grpc
+  version: 0032a855ba5c8a3c8e0d71c2deef354b70af1584
+  subpackages:
+  - codes
+  - credentials
+  - grpclog
+  - internal
+  - metadata
+  - naming
+  - transport
+  - benchmark/grpc_testing
+  - benchmark/stats
+  - examples/helloworld/helloworld
+  - examples/route_guide/routeguide
+  - health/grpc_health_v1
+  - interop/grpc_testing
+  - reflection/grpc_reflection_v1alpha
+  - stress/grpc_testing
+- name: gopkg.in/airbrake/gobrake.v2
+  version: 668876711219e8b0206e2994bf0a59d889c775aa
+- name: gopkg.in/gemnasium/logrus-airbrake-hook.v2
+  version: bfee1239d796830ca346767650cce5ba90d58c57
+- name: gopkg.in/yaml.v2
+  version: c1cd2254a6dd314c9d73c338c12688c9325d85c6
+testImports:
+- name: github.com/gopherjs/gopherjs
+  version: e34a5cd6a1bc7c4fde759f2d3039852fc68b5fcc
+  subpackages:
+  - js
+- name: github.com/jtolds/gls
+  version: 8ddce2a84170772b95dd5d576c48d517b22cac63
+- name: github.com/smartystreets/assertions
+  version: 26acb9229f421449ac63d014995b282d59261a8b
+  subpackages:
+  - internal/go-render/render
+  - internal/oglematchers
+- name: github.com/smartystreets/goconvey
+  version: d4c757aa9afd1e2fc1832aaab209b5794eb336e1
+  subpackages:
+  - convey
+  - convey/reporting

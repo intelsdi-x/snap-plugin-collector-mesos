@@ -1,0 +1,23 @@
+package: github.com/intelsdi-x/snap-plugin-collector-mesos
+import:
+- package: github.com/Sirupsen/logrus
+  version: ^0.11.0
+- package: github.com/golang/protobuf
+  subpackages:
+  - proto
+- package: github.com/intelsdi-x/snap-plugin-utilities
+  subpackages:
+  - config
+  - ns
+  - str
+- package: github.com/intelsdi-x/snap
+  version: ^1.0.0
+  subpackages:
+  - control/plugin
+  - control/plugin/cpolicy
+  - core
+testImport:
+- package: github.com/smartystreets/goconvey
+  version: ^1.6.2
+  subpackages:
+  - convey

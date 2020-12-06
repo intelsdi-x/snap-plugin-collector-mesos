@@ -34,7 +34,7 @@ import (
 const (
 	pluginVendor  = "intel"
 	pluginName    = "mesos"
-	pluginVersion = 1
+	pluginVersion = 2
 	pluginType    = plugin.CollectorPluginType
 )
 
