@@ -22,11 +22,11 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/client"
 	"github.com/intelsdi-x/snap-plugin-collector-mesos/mesos/mesos_pb2"
 	"github.com/intelsdi-x/snap-plugin-utilities/ns"
 	"github.com/intelsdi-x/snap-plugin-utilities/str"
+	log "github.com/sirupsen/logrus"
 )
 
 // The "/monitor/statistics" endpoint returns an array of JSON objects. Its top-level structure isn't defined by a
